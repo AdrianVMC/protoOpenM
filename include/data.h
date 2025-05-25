@@ -18,6 +18,7 @@ void hide_password(char *buffer, size_t max_length);
 int register_user(const char *username, const char *password);
 int login_user(const char *username, const char *password);
 void list_songs();
+void play_song();
 int load_users();
 int load_songs();
 

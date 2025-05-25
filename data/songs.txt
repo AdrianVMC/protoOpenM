@@ -1,10 +1,1 @@
-Bohemian Rhapsody,Queen
-Imagine,John Lennon
-Smells Like Teen Spirit,Nirvana
-Hotel California,Eagles
-Billie Jean,Michael Jackson
-Hysteria,Muse
-Creep,Radiohead
-Chop Suey,System of a Down
-Blinding Lights,The Weeknd
-El Triste,José José
+Shinunoga E wa,Fujii Kaze,data/audio/shinunogaEwa_audio.mp3

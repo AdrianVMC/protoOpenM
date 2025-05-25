@@ -36,10 +36,8 @@ void handle_user_menu() {
                 search_song_by_input();
             break;
 
-
-
             case 2:
-                printf("Reproduciendo canción (simulado)...\n");
+                play_song();
                 break;
 
             case 3:

@@ -8,6 +8,51 @@
 
 char CURRENT_USER[50] = "";
 
+
+void play_song() {
+    char title[100];
+    printf("Ingrese el nombre exacto de la canción a reproducir: ");
+    fgets(title, sizeof(title), stdin);
+    title[strcspn(title, "\n")] = 0;
+
+    FILE *file = fopen("data/songs.txt", "r");
+    if (!file) {
+        printf("No se pudo abrir el archivo de canciones.\n");
+        return;
+    }
+
+    char line[256];
+    char song[100], artist[100], path[200];
+    int found = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+        sscanf(line, "%[^,],%[^,],%[^\n]", song, artist, path);
+        if (strcasecmp(title, song) == 0) {
+            found = 1;
+            printf("Reproduciendo: %s - %s\n", song, artist);
+
+            FILE *audio_file = fopen(path, "r");
+            if (!audio_file) {
+                printf("El archivo de audio no fue encontrado: %s\n", path);
+                break;
+            }
+            fclose(audio_file);
+            //Puede haber problemas de compatibilidad con MAC y Windows
+            char command[300];
+            snprintf(command, sizeof(command), "afplay \"%s\"", path);
+            system(command);
+            break;
+        }
+    }
+
+    if (!found) {
+        printf("No se encontró una canción con ese título.\n");
+    }
+
+    fclose(file);
+}
+
+
 int register_user(const char *username, const char *password) {
     FILE *f = fopen("data/users.txt", "a");
     if (!f) return 0;
@@ -53,30 +98,35 @@ void hide_password(char *buffer, size_t max_length) {
 
 void search_song_by_input() {
     char query[100];
-    printf("🔍 Enter song title or artist to search: ");
+    printf("Ingrese el título o artista a buscar: ");
     fgets(query, sizeof(query), stdin);
     query[strcspn(query, "\n")] = 0;
 
     FILE *file = fopen("data/songs.txt", "r");
     if (!file) {
-        printf("❌ Could not open songs file.\n");
+        printf("No se pudo abrir el archivo de canciones.\n");
         return;
     }
 
     char line[256];
+    char song[100], artist[100];
     int found = 0;
-    printf("\n📋 Search results:\n");
+
+    printf("\nResultados de la búsqueda:\n");
 
     while (fgets(line, sizeof(line), file)) {
-        if (strstr(line, query) != NULL) {
-            printf("🎶 %s", line);
+        sscanf(line, "%[^,],%[^,],%*s", song, artist);
+
+        if (strstr(song, query) != NULL || strstr(artist, query) != NULL) {
+            printf("Título: %s | Artista: %s\n", song, artist);
             found = 1;
         }
     }
 
     if (!found) {
-        printf("No matches found for '%s'.\n", query);
+        printf("No se encontraron coincidencias para '%s'.\n", query);
     }
 
     fclose(file);
 }
+
