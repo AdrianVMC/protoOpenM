@@ -4,6 +4,11 @@
 #include <termios.h>
 #include "../include/cli.h"
 #include "../include/data.h"
+#include "users.h"
+#include "songs.h"
+users_init();
+songs_init();
+
 
 void show_auth_menu() {
     printf("=== Bienvenido a openMS ===\n");
