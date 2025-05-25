@@ -5,9 +5,13 @@ TARGET=openMS
 
 all: $(TARGET)
 SRCS = \
-    client/main.c  client/ui_login.c client/ui_library.c \
-    server/users.c server/songs.c    \
-    utils/...      \
+    client/main.c \
+    client/ui_login.c \
+    client/ui_library.c \
+    server/users.c \
+    server/songs.c \
+    utils/file_utils.c
+
 $(TARGET): client/cli.o utils/file_utils.o
 	$(CC) -o $(TARGET) client/cli.o utils/file_utils.o
 

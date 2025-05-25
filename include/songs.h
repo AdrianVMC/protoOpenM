@@ -1,6 +1,8 @@
 #ifndef SONGS_H
 #define SONGS_H
 
+#include <stddef.h>
+
 #define TITLE_MAX  100
 #define ARTIST_MAX 100
 

@@ -6,86 +6,44 @@
 #include <termios.h>
 #include "../include/data.h"
 
+#include "../include/users.h"
+#include "../include/songs.h"
+
 char CURRENT_USER[50] = "";
 
-
-void play_song() {
-    char title[100];
-    printf("Ingrese el nombre exacto de la canción a reproducir: ");
-    fgets(title, sizeof(title), stdin);
-    title[strcspn(title, "\n")] = 0;
-
-    FILE *file = fopen("data/songs.txt", "r");
-    if (!file) {
-        printf("No se pudo abrir el archivo de canciones.\n");
-        return;
+/*-----------------------------------------------------*/
+/* REGISTRO Y LOGIN                                    */
+/*-----------------------------------------------------*/
+int register_user(const char *username, const char *password)
+{
+    if (users_register(username, password) == 0) {
+        printf("Usuario registrado con éxito.\n");
+        return 1;
     }
-
-    char line[256];
-    char song[100], artist[100], path[200];
-    int found = 0;
-
-    while (fgets(line, sizeof(line), file)) {
-        sscanf(line, "%[^,],%[^,],%[^\n]", song, artist, path);
-        if (strcasecmp(title, song) == 0) {
-            found = 1;
-            printf("Reproduciendo: %s - %s\n", song, artist);
-
-            FILE *audio_file = fopen(path, "r");
-            if (!audio_file) {
-                printf("El archivo de audio no fue encontrado: %s\n", path);
-                break;
-            }
-            fclose(audio_file);
-            //Puede haber problemas de compatibilidad con MAC y Windows
-            char command[300];
-            snprintf(command, sizeof(command), "afplay \"%s\"", path);
-            system(command);
-            break;
-        }
-    }
-
-    if (!found) {
-        printf("No se encontró una canción con ese título.\n");
-    }
-
-    fclose(file);
-}
-
-
-int register_user(const char *username, const char *password) {
-    FILE *f = fopen("data/users.txt", "a");
-    if (!f) return 0;
-    fprintf(f, "%s,%s\n", username, password);
-    fclose(f);
-    printf("Usuario registrado con éxito\n");
-    return 1;
-}
-
-int login_user(const char *username, const char *password) {
-    FILE *f = fopen("data/users.txt", "r");
-    if (!f) return 0;
-
-    char line[100], u[50], p[50];
-    while (fgets(line, sizeof(line), f)) {
-        sscanf(line, "%[^,],%s", u, p);
-        if (strcmp(u, username) == 0 && strcmp(p, password) == 0) {
-            strcpy(CURRENT_USER, username);
-            fclose(f);
-            return 1;
-        }
-    }
-
-    fclose(f);
+    printf("Error: ese usuario ya existe o no se pudo escribir.\n");
     return 0;
 }
 
-void hide_password(char *buffer, size_t max_length) {
-    struct termios oldt, newt;
+int login_user(const char *username, const char *password)
+{
+    int r = users_login(username, password);
+    if (r == 0) {
+        strcpy(CURRENT_USER, username);
+        return 1;
+    }
+    if (r == -2) puts("Ya existe una sesión activa con esa cuenta.");
+    else         puts("Credenciales incorrectas.");
+    return 0;
+}
 
+/*-----------------------------------------------------*/
+/* UTILIDAD PARA OCULTAR CONTRASEÑA EN TERMINAL        */
+/*-----------------------------------------------------*/
+void hide_password(char *buffer, size_t max_length)
+{
+    struct termios oldt, newt;
     tcgetattr(STDIN_FILENO, &oldt);
     newt = oldt;
-
     newt.c_lflag &= ~(ECHO);
     tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
@@ -96,37 +54,74 @@ void hide_password(char *buffer, size_t max_length) {
     printf("\n");
 }
 
-void search_song_by_input() {
+/*-----------------------------------------------------*/
+/* REPRODUCIR CANCIÓN                                  */
+/*-----------------------------------------------------*/
+void play_song(void)
+{
+    char title[100];
+    printf("Ingrese el nombre exacto de la canción a reproducir: ");
+    fgets(title, sizeof(title), stdin);
+    title[strcspn(title, "\n")] = 0;
+
+    Song *arr; size_t n;
+    if (songs_load(&arr, &n) <= 0) {
+        puts("La biblioteca está vacía o no se pudo leer.");
+        return;
+    }
+
+    for (size_t i = 0; i < n; ++i) {
+        if (strcasecmp(title, arr[i].title) == 0) {
+            printf("Reproduciendo: %s - %s\n",
+                   arr[i].title, arr[i].artist);
+
+            if (access(arr[i].path, R_OK) != 0) {
+                printf("No se encontró el archivo: %s\n", arr[i].path);
+                free(arr); return;
+            }
+
+#ifdef __APPLE__
+            char cmd[256]; snprintf(cmd, sizeof(cmd), "afplay \"%s\"", arr[i].path);
+#else
+            char cmd[256]; snprintf(cmd, sizeof(cmd), "mpg123 \"%s\"", arr[i].path);
+#endif
+            system(cmd);
+            free(arr); return;
+        }
+    }
+    puts("No se encontró una canción con ese título.");
+    free(arr);
+}
+
+/*-----------------------------------------------------*/
+/* BÚSQUEDA POR TÍTULO O ARTISTA                       */
+/*-----------------------------------------------------*/
+void search_song_by_input(void)
+{
     char query[100];
     printf("Ingrese el título o artista a buscar: ");
     fgets(query, sizeof(query), stdin);
     query[strcspn(query, "\n")] = 0;
 
-    FILE *file = fopen("data/songs.txt", "r");
-    if (!file) {
-        printf("No se pudo abrir el archivo de canciones.\n");
+    Song *arr; size_t n;
+    if (songs_load(&arr, &n) <= 0) {
+        puts("No se pudo leer la biblioteca.");
         return;
     }
 
-    char line[256];
-    char song[100], artist[100];
     int found = 0;
-
-    printf("\nResultados de la búsqueda:\n");
-
-    while (fgets(line, sizeof(line), file)) {
-        sscanf(line, "%[^,],%[^,],%*s", song, artist);
-
-        if (strstr(song, query) != NULL || strstr(artist, query) != NULL) {
-            printf("Título: %s | Artista: %s\n", song, artist);
+    puts("\nResultados de la búsqueda:");
+    for (size_t i = 0; i < n; ++i) {
+        if (strcasestr(arr[i].title,  query) ||
+            strcasestr(arr[i].artist, query))
+        {
+            printf("Título: %s | Artista: %s\n",
+                   arr[i].title, arr[i].artist);
             found = 1;
         }
     }
+    if (!found)
+        printf("No se encontraron coincidencias para \"%s\".\n", query);
 
-    if (!found) {
-        printf("No se encontraron coincidencias para '%s'.\n", query);
-    }
-
-    fclose(file);
+    free(arr);
 }
-
