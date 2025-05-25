@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
+#include <termios.h>
 #include "../include/cli.h"
 #include "../include/data.h"
 
@@ -31,22 +33,21 @@ void handle_user_menu() {
 
         switch (opt) {
             case 1:
-                printf("Buscar canción (simulado): ");
-                fgets(input, sizeof(input), stdin);
-                input[strcspn(input, "\n")] = 0;
-                printf("Simulando búsqueda de \"%s\"...\n", input);
-                break;
+                search_song_by_input();
+            break;
+
+
 
             case 2:
-                printf("🎵 Reproduciendo canción (simulado)...\n");
+                printf("Reproduciendo canción (simulado)...\n");
                 break;
 
             case 3:
-                printf("⏹ Canción detenida.\n");
+                printf("Canción detenida.\n");
                 break;
 
             case 4:
-                printf("👋 Cerrando sesión...\n");
+                printf("Cerrando sesión...\n");
                 strcpy(CURRENT_USER, "");
                 return;
 
@@ -78,10 +79,10 @@ void handle_main_menu() {
                 hide_password(password, sizeof(password));
 
                 if (login_user(username, password)) {
-                    printf("Inicio de sesión exitoso.\n\n");
+                    printf("✅ Inicio de sesión exitoso.\n\n");
                     handle_user_menu();
                 } else {
-                    printf("Usuario o contraseña incorrectos.\n");
+                    printf("❌ Usuario o contraseña incorrectos.\n");
                 }
                 break;
 
@@ -108,7 +109,6 @@ void handle_main_menu() {
 
     } while (1);
 }
-
 
 int main() {
     handle_main_menu();

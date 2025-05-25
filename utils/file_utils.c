@@ -1,28 +1,12 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
-#include <termios.h>
 #include <unistd.h>
+#include <limits.h>
+#include <termios.h>
 #include "../include/data.h"
 
 char CURRENT_USER[50] = "";
-
-
-void hide_password(char *buffer, size_t max_length) {
-    struct termios oldt, newt;
-
-    tcgetattr(STDIN_FILENO, &oldt);
-    newt = oldt;
-
-    newt.c_lflag &= ~(ECHO);
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-    fgets(buffer, max_length, stdin);
-    buffer[strcspn(buffer, "\n")] = 0;
-
-    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-    printf("\n");
-}
-
 
 int register_user(const char *username, const char *password) {
     FILE *f = fopen("data/users.txt", "a");
@@ -41,9 +25,9 @@ int login_user(const char *username, const char *password) {
     while (fgets(line, sizeof(line), f)) {
         sscanf(line, "%[^,],%s", u, p);
         if (strcmp(u, username) == 0 && strcmp(p, password) == 0) {
-        strcpy(CURRENT_USER, username);
-        fclose(f);
-        return 1;
+            strcpy(CURRENT_USER, username);
+            fclose(f);
+            return 1;
         }
     }
 
@@ -51,25 +35,48 @@ int login_user(const char *username, const char *password) {
     return 0;
 }
 
-void list_songs() {
-    FILE *f = fopen("data/songs.txt", "r");
+void hide_password(char *buffer, size_t max_length) {
+    struct termios oldt, newt;
 
-    if (strlen(CURRENT_USER) == 0) {
-    printf("Debes iniciar sesión para ver las canciones.\n");
-    return;
-    }
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
 
-    if (!f) {
-        printf("No se pudo abrir el archivo de canciones.\n");
+    newt.c_lflag &= ~(ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+    fgets(buffer, max_length, stdin);
+    buffer[strcspn(buffer, "\n")] = 0;
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    printf("\n");
+}
+
+void search_song_by_input() {
+    char query[100];
+    printf("🔍 Enter song title or artist to search: ");
+    fgets(query, sizeof(query), stdin);
+    query[strcspn(query, "\n")] = 0;
+
+    FILE *file = fopen("data/songs.txt", "r");
+    if (!file) {
+        printf("❌ Could not open songs file.\n");
         return;
     }
 
-    char line[200], title[100], artist[100];
-    printf("=== Canciones Disponibles ===\n");
-    while (fgets(line, sizeof(line), f)) {
-        sscanf(line, "%[^,],%[^\n]", title, artist);
-        printf("- %s por %s\n", title, artist);
+    char line[256];
+    int found = 0;
+    printf("\n📋 Search results:\n");
+
+    while (fgets(line, sizeof(line), file)) {
+        if (strstr(line, query) != NULL) {
+            printf("🎶 %s", line);
+            found = 1;
+        }
     }
 
-    fclose(f);
+    if (!found) {
+        printf("No matches found for '%s'.\n", query);
+    }
+
+    fclose(file);
 }

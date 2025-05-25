@@ -13,6 +13,7 @@ typedef struct {
     char artist[100];
 } Song;
 
+void search_song_by_input();
 void hide_password(char *buffer, size_t max_length);
 int register_user(const char *username, const char *password);
 int login_user(const char *username, const char *password);
