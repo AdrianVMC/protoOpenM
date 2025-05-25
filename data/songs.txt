@@ -1,1 +1,1 @@
-Shinunoga E wa,Fujii Kaze,data/audio/shinunogaEwa_audio.mp3
+Shinunoga E wa,Fujii Kaze,data/audio/shinunogaEwa_audio.mp3,96

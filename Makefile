@@ -1,18 +1,17 @@
-CC=gcc
-CFLAGS=-Iinclude
-
-TARGET=openMS
+CC = gcc
+CFLAGS = -Iinclude
+LDFLAGS = -lncurses
+SRC = client/cli.c utils/file_utils.c
+OBJ = $(SRC:.c=.o)
+TARGET = openMS
 
 all: $(TARGET)
 
-$(TARGET): client/cli.o utils/file_utils.o
-	$(CC) -o $(TARGET) client/cli.o utils/file_utils.o
+$(TARGET): $(OBJ)
+	$(CC) -o $(TARGET) $(OBJ) $(LDFLAGS)
 
-client/cli.o: client/cli.c
-	$(CC) $(CFLAGS) -c client/cli.c -o client/cli.o
-
-utils/file_utils.o: utils/file_utils.c
-	$(CC) $(CFLAGS) -c utils/file_utils.c -o utils/file_utils.o
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o $(TARGET)
+	rm -f $(OBJ) $(TARGET)
