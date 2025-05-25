@@ -1,13 +1,33 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <ncurses.h>
 #include <unistd.h>
 #include <limits.h>
 #include <termios.h>
 #include "../include/data.h"
 
+
+#define LENGTH_BAR 40
 char CURRENT_USER[50] = "";
 
+void draw_progress_bar(int progress, int duration, const char *statem) {
+    int fstate = (progress * LENGTH_BAR) / duration;
+    mvprintw(5, 2, "[");
+    for (int i = 0; i < LENGTH_BAR; i++) {
+        if (i < fstate) {
+            printw("=");
+        } else {
+            printw(" ");
+        }
+    }
+    printw("] %d%%", (progress * 100) / duration);
+    mvprintw(3, 2, "Estado: %s", statem);
+    refresh();
+}
 
 void play_song() {
     char title[100];
@@ -21,26 +41,63 @@ void play_song() {
         return;
     }
 
-    char line[256];
+    char line[300];
     char song[100], artist[100], path[200];
+    int duration = 0;
     int found = 0;
 
     while (fgets(line, sizeof(line), file)) {
-        sscanf(line, "%[^,],%[^,],%[^\n]", song, artist, path);
+        sscanf(line, "%[^,],%[^,],%[^,],%d", song, artist, path, &duration);
         if (strcasecmp(title, song) == 0) {
             found = 1;
-            printf("Reproduciendo: %s - %s\n", song, artist);
 
-            FILE *audio_file = fopen(path, "r");
-            if (!audio_file) {
-                printf("El archivo de audio no fue encontrado: %s\n", path);
-                break;
+            initscr();
+            noecho();
+            cbreak();
+            timeout(100);
+            keypad(stdscr, TRUE);
+
+            pid_t pid = fork();
+            if (pid == 0) {
+                execlp("afplay", "afplay", path, NULL);
+                perror("Error al reproducir audio");
+                exit(1);
             }
-            fclose(audio_file);
-            //Puede haber problemas de compatibilidad con MAC y Windows
-            char command[300];
-            snprintf(command, sizeof(command), "afplay \"%s\"", path);
-            system(command);
+
+            char statem[20] = "Reproduciendo";
+            int progress = 0;
+            int pausado = 0;
+
+            while (progress <= duration) {
+                clear();
+                mvprintw(1, 2, "🎵 Reproduciendo: %s - %s", song, artist);
+                mvprintw(7, 2, "Controles: [p] Pausar | [r] Reanudar | [s] Detener");
+
+                draw_progress_bar(progress, duration, statem);
+
+                int ch = getch();
+                if (ch == 'p') {
+                    kill(pid, SIGSTOP);
+                    strcpy(statem, "Pausado");
+                    pausado = 1;
+                } else if (ch == 'r') {
+                    kill(pid, SIGCONT);
+                    strcpy(statem, "Reproduciendo");
+                    pausado = 0;
+                } else if (ch == 's') {
+                    kill(pid, SIGKILL);
+                    strcpy(statem, "Detenido");
+                    break;
+                }
+
+                if (!pausado) {
+                    sleep(1);
+                    progress++;
+                }
+            }
+
+            endwin();
+            wait(NULL);
             break;
         }
     }
@@ -51,6 +108,7 @@ void play_song() {
 
     fclose(file);
 }
+
 
 
 int register_user(const char *username, const char *password) {
