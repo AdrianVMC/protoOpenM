@@ -8,13 +8,14 @@ void show_main_menu() {
     printf("1. Registrarse\n");
     printf("2. Iniciar sesión\n");
     printf("3. Ver canciones\n");
+    printf("4. Cerrar Sesión\n");
     printf("0. Salir\n");
     printf("Seleccione una opción: ");
 }
 
 void handle_main_menu() {
     int option;
-    char user[50], pass[50];
+    char username[50], password[50];
 
     do {
         show_main_menu();
@@ -23,28 +24,41 @@ void handle_main_menu() {
 
         switch (option) {
             case 1:
-                printf("Usuario: "); fgets(user, sizeof(user), stdin);
-                printf("Contraseña: "); fgets(pass, sizeof(pass), stdin);
-                user[strcspn(user, "\n")] = 0;
-                pass[strcspn(pass, "\n")] = 0;
-                register_user(user, pass);
+                printf("Usuario: ");
+                fgets(username, sizeof(username), stdin);
+                username[strcspn(username, "\n")] = 0;
+
+                printf("Contraseña: ");
+                hide_password(password, sizeof(password));
+
+                register_user(username, password);
                 break;
 
             case 2:
-                printf("Usuario: "); fgets(user, sizeof(user), stdin);
-                printf("Contraseña: "); fgets(pass, sizeof(pass), stdin);
-                user[strcspn(user, "\n")] = 0;
-                pass[strcspn(pass, "\n")] = 0;
-                if (login_user(user, pass))
+                printf("Usuario: ");
+                fgets(username, sizeof(username), stdin);
+                username[strcspn(username, "\n")] = 0;
+
+                printf("Contraseña: ");
+                hide_password(password, sizeof(password));
+
+                if (login_user(username, password)) {
                     printf("Inicio de sesión exitoso\n");
-                else
+                } else {
                     printf("Error al iniciar sesión\n");
+                }
                 break;
 
             case 3:
                 list_songs();
                 break;
-        }
+
+            case 4:
+                strcpy(CURRENT_USER, "");
+                printf("Sesión cerrada.\n");
+                break;
+
+            }
     } while (option != 0);
 }
 

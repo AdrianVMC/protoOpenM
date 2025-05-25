@@ -1,6 +1,28 @@
 #include <stdio.h>
 #include <string.h>
+#include <termios.h>
+#include <unistd.h>
 #include "../include/data.h"
+
+char CURRENT_USER[50] = "";
+
+
+void hide_password(char *buffer, size_t max_length) {
+    struct termios oldt, newt;
+
+    tcgetattr(STDIN_FILENO, &oldt);
+    newt = oldt;
+
+    newt.c_lflag &= ~(ECHO);
+    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+    fgets(buffer, max_length, stdin);
+    buffer[strcspn(buffer, "\n")] = 0;
+
+    tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+    printf("\n");
+}
+
 
 int register_user(const char *username, const char *password) {
     FILE *f = fopen("data/users.txt", "a");
@@ -19,8 +41,9 @@ int login_user(const char *username, const char *password) {
     while (fgets(line, sizeof(line), f)) {
         sscanf(line, "%[^,],%s", u, p);
         if (strcmp(u, username) == 0 && strcmp(p, password) == 0) {
-            fclose(f);
-            return 1;
+        strcpy(CURRENT_USER, username);
+        fclose(f);
+        return 1;
         }
     }
 
@@ -30,6 +53,12 @@ int login_user(const char *username, const char *password) {
 
 void list_songs() {
     FILE *f = fopen("data/songs.txt", "r");
+
+    if (strlen(CURRENT_USER) == 0) {
+    printf("Debes iniciar sesión para ver las canciones.\n");
+    return;
+    }
+
     if (!f) {
         printf("No se pudo abrir el archivo de canciones.\n");
         return;
