@@ -1,17 +1,23 @@
 CC = gcc
 CFLAGS = -Iinclude
 LDFLAGS = -lncurses
-SRC = client/cli.c utils/file_utils.c
-OBJ = $(SRC:.c=.o)
-TARGET = openMS
+CLIENT_SRC = client/cli.c utils/file_utils.c
+SERVER_SRC = server/server.c
+CLIENT_OBJ = $(CLIENT_SRC:.c=.o)
+SERVER_OBJ = $(SERVER_SRC:.c=.o)
+CLIENT_TARGET = openMS
+SERVER_TARGET = openMS-server
 
-all: $(TARGET)
+all: $(CLIENT_TARGET) $(SERVER_TARGET)
 
-$(TARGET): $(OBJ)
-	$(CC) -o $(TARGET) $(OBJ) $(LDFLAGS)
+$(CLIENT_TARGET): $(CLIENT_OBJ)
+	$(CC) -o $(CLIENT_TARGET) $(CLIENT_OBJ) $(LDFLAGS)
+
+$(SERVER_TARGET): $(SERVER_OBJ)
+	$(CC) -o $(SERVER_TARGET) $(SERVER_OBJ)
 
 %.o: %.c
 	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
-	rm -f $(OBJ) $(TARGET)
+	rm -f $(CLIENT_OBJ) $(SERVER_OBJ) $(CLIENT_TARGET) $(SERVER_TARGET)
