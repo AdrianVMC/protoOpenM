@@ -5,20 +5,7 @@
 #include <termios.h>
 #include "../include/cli.h"
 #include "../include/data.h"
-
-/**
- * Notifica al servidor que un usuario se ha conectado,
- * escribiendo su nombre en un archivo compartido.
- */
-void notify_server_user_connected(const char* username) {
-    FILE* file = fopen("users.txt", "w");
-    if (file) {
-        fprintf(file, "%s\n", username);
-        fclose(file);
-    } else {
-        perror("❌ Error al escribir en users.txt");
-    }
-}
+#include "../include/server.h"
 
 void show_auth_menu() {
     printf("=== Bienvenido a openMS ===\n");
@@ -37,9 +24,24 @@ void show_user_menu() {
     printf("Seleccione una opción: ");
 }
 
+void notify_server_user_connected(const char* username) {
+    FILE* file = fopen("users.txt", "w");
+    if (file) {
+        fprintf(file, "%s\n", username);
+        fclose(file);
+    }
+}
+
+void notify_server_user_disconnected() {
+    FILE* file = fopen("users.txt", "w");
+    if (file) {
+        fprintf(file, "LOGOUT\n");
+        fclose(file);
+    }
+}
+
 void handle_user_menu() {
     int opt;
-    char input[100];
 
     do {
         show_user_menu();
@@ -61,6 +63,7 @@ void handle_user_menu() {
 
             case 4:
                 printf("Cerrando sesión...\n");
+                notify_server_user_disconnected();
                 strcpy(CURRENT_USER, "");
                 return;
 
@@ -93,7 +96,7 @@ void handle_main_menu() {
 
                 if (login_user(username, password)) {
                     printf("✅ Inicio de sesión exitoso.\n\n");
-                    notify_server_user_connected(username);  // Enviar info al servidor
+                    notify_server_user_connected(username);
                     handle_user_menu();
                 } else {
                     printf("❌ Usuario o contraseña incorrectos.\n");
