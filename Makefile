@@ -1,23 +1,38 @@
+# Makefile para protoOpenM con registro automático y ncurses
+
 CC = gcc
-CFLAGS = -Iinclude
-LDFLAGS = -lncurses
-CLIENT_SRC = client/cli.c utils/file_utils.c
+CFLAGS = -Wall -pthread -Iinclude
+
+NCURSES_FLAGS = -L/opt/homebrew/opt/ncurses/lib -lncurses -I/opt/homebrew/opt/ncurses/include
+
+BUILD_DIR = build
+
+CLIENT_SRC = client/cli.c
 SERVER_SRC = server/server.c
-CLIENT_OBJ = $(CLIENT_SRC:.c=.o)
-SERVER_OBJ = $(SERVER_SRC:.c=.o)
-CLIENT_TARGET = openMS
-SERVER_TARGET = openMS-server
+UTILS_SRC = utils/shared_utils.c
+REGISTRY_SRC = utils/client_registry.c
 
-all: $(CLIENT_TARGET) $(SERVER_TARGET)
+CLIENT_BIN = $(BUILD_DIR)/client
+SERVER_BIN = $(BUILD_DIR)/server
 
-$(CLIENT_TARGET): $(CLIENT_OBJ)
-	$(CC) -o $(CLIENT_TARGET) $(CLIENT_OBJ) $(LDFLAGS)
+.PHONY: all clean run-client run-server
 
-$(SERVER_TARGET): $(SERVER_OBJ)
-	$(CC) -o $(SERVER_TARGET) $(SERVER_OBJ)
+all: $(CLIENT_BIN) $(SERVER_BIN)
 
-%.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD_DIR):
+	mkdir -p $(BUILD_DIR)
+
+$(CLIENT_BIN): $(CLIENT_SRC) $(UTILS_SRC) $(REGISTRY_SRC) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) $(NCURSES_FLAGS) -o $@ $^
+
+$(SERVER_BIN): $(SERVER_SRC) $(UTILS_SRC) $(REGISTRY_SRC) | $(BUILD_DIR)
+	$(CC) $(CFLAGS) -o $@ $^
+
+run-client: $(CLIENT_BIN)
+	./$(CLIENT_BIN)
+
+run-server: $(SERVER_BIN)
+	./$(SERVER_BIN)
 
 clean:
-	rm -f $(CLIENT_OBJ) $(SERVER_OBJ) $(CLIENT_TARGET) $(SERVER_TARGET)
+	rm -rf $(BUILD_DIR)

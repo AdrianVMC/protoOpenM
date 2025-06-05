@@ -1,133 +1,199 @@
-// client/cli.c
-#include <stdio.h>
+#include <ncurses.h>
 #include <string.h>
-#include <limits.h>
-#include <termios.h>
-#include "../include/cli.h"
-#include "../include/data.h"
-#include "../include/server.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <semaphore.h>
+#include "../include/shared.h"
+#include "../include/shared_utils.h"
+#include "../include/client_registry.h"
 
-void show_auth_menu() {
-    printf("=== Bienvenido a openMS ===\n");
-    printf("1. Iniciar sesión\n");
-    printf("2. Registrarse\n");
-    printf("0. Salir\n");
-    printf("Seleccione una opción: ");
-}
+#define LOGIN_INPUT_MAX 64
+#define MAX_CANCIONES 50
+#define NUM_OPTIONS 3
 
-void show_user_menu() {
-    printf("=== Menú de Usuario ===\n");
-    printf("1. Buscar canción\n");
-    printf("2. Reproducir canción\n");
-    printf("3. Detener reproducción\n");
-    printf("4. Cerrar sesión\n");
-    printf("Seleccione una opción: ");
-}
+const char *menu_options[NUM_OPTIONS] = {
+    "Ver canciones",
+    "Buscar cancion",
+    "Cerrar sesion"
+};
 
-void notify_server_user_connected(const char* username) {
-    FILE* file = fopen("users.txt", "w");
-    if (file) {
-        fprintf(file, "%s\n", username);
-        fclose(file);
+int show_main_menu_ncurses() {
+    initscr();
+    noecho();
+    cbreak();
+    curs_set(0);
+    keypad(stdscr, TRUE);
+
+    int highlight = 0;
+    int input;
+    int selected = -1;
+
+    while (1) {
+        clear();
+        mvprintw(1, 2, "🎵 Menu Principal");
+
+        for (int i = 0; i < NUM_OPTIONS; i++) {
+            if (i == highlight) {
+                attron(A_REVERSE);
+                mvprintw(3 + i, 4, "> %s", menu_options[i]);
+                attroff(A_REVERSE);
+            } else {
+                mvprintw(3 + i, 6, "  %s", menu_options[i]);
+            }
+        }
+
+        refresh();
+        input = getch();
+        switch (input) {
+            case KEY_UP:
+                highlight = (highlight == 0) ? NUM_OPTIONS - 1 : highlight - 1;
+                clear();
+                break;
+            case KEY_DOWN:
+                highlight = (highlight + 1) % NUM_OPTIONS;
+                clear();
+                break;
+            case KEY_LEFT:
+                highlight = (highlight + 1) % NUM_OPTIONS;
+                clear();
+            break;
+            case '\n': {
+                selected = highlight;
+                clear();
+                endwin();
+                return selected;
+            }
+            case 27:
+                clear();
+                endwin();
+                return -1;
+        }
     }
 }
 
-void notify_server_user_disconnected() {
-    FILE* file = fopen("users.txt", "w");
-    if (file) {
-        fprintf(file, "LOGOUT\n");
-        fclose(file);
+void show_songs_ncurses(char **canciones, int total) {
+    initscr();
+    noecho();
+    cbreak();
+    curs_set(0);
+    int y = 2;
+    mvprintw(0, 2, "🎵 Canciones disponibles:");
+    for (int i = 0; i < total; i++) {
+        mvprintw(y++, 4, "%2d. %s", i + 1, canciones[i]);
     }
+    mvprintw(y + 1, 2, "Presiona ENTER para volver...");
+    refresh();
+    while (getch() != '\n');
+    clear();
+    endwin();
 }
 
-void handle_user_menu() {
-    int opt;
+void login_interface(char *username, char *password) {
+    initscr();
+    noecho();
+    cbreak();
 
-    do {
-        show_user_menu();
-        scanf("%d", &opt);
-        getchar();
+    int y = 5, x = 10;
+    mvprintw(y, x, "🔐 Login System");
+    mvprintw(y + 2, x, "Username: ");
+    echo();
+    getnstr(username, LOGIN_INPUT_MAX);
+    noecho();
 
-        switch (opt) {
-            case 1:
-                search_song_by_input();
-                break;
+    mvprintw(y + 4, x, "Password: ");
+    echo();
+    getnstr(password, LOGIN_INPUT_MAX);
+    noecho();
 
-            case 2:
-                play_song();
-                break;
-
-            case 3:
-                printf("Canción detenida.\n");
-                break;
-
-            case 4:
-                printf("Cerrando sesión...\n");
-                notify_server_user_disconnected();
-                strcpy(CURRENT_USER, "");
-                return;
-
-            default:
-                printf("Opción inválida.\n");
-        }
-
-        printf("\n");
-
-    } while (1);
-}
-
-void handle_main_menu() {
-    int option;
-    char username[50], password[50];
-
-    do {
-        show_auth_menu();
-        scanf("%d", &option);
-        getchar();
-
-        switch (option) {
-            case 1:
-                printf("Usuario: ");
-                fgets(username, sizeof(username), stdin);
-                username[strcspn(username, "\n")] = 0;
-
-                printf("Contraseña: ");
-                hide_password(password, sizeof(password));
-
-                if (login_user(username, password)) {
-                    printf("✅ Inicio de sesión exitoso.\n\n");
-                    notify_server_user_connected(username);
-                    handle_user_menu();
-                } else {
-                    printf("❌ Usuario o contraseña incorrectos.\n");
-                }
-                break;
-
-            case 2:
-                printf("Usuario: ");
-                fgets(username, sizeof(username), stdin);
-                username[strcspn(username, "\n")] = 0;
-
-                printf("Contraseña: ");
-                hide_password(password, sizeof(password));
-
-                register_user(username, password);
-                break;
-
-            case 0:
-                printf("Saliendo de openMS...\n");
-                return;
-
-            default:
-                printf("Opción inválida.\n");
-        }
-
-        printf("\n");
-
-    } while (1);
+    mvprintw(y + 6, x, "Authenticating...");
+    refresh();
+    sleep(1);
+    clear();
+    endwin();
 }
 
 int main() {
-    handle_main_menu();
+    char username[LOGIN_INPUT_MAX];
+    char password[LOGIN_INPUT_MAX];
+    pid_t pid = getpid();
+
+    char shm_name[64], sem_client[64], sem_server[64];
+    generate_names(shm_name, sem_client, sem_server, pid);
+
+    // Crear memoria compartida y semáforos antes de registrar cliente
+    int shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
+    ftruncate(shm_fd, sizeof(SharedData));
+    SharedData *data = mmap(0, sizeof(SharedData), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
+    sem_t *client_sem = sem_open(sem_client, O_CREAT, 0666, 0);
+    sem_t *server_sem = sem_open(sem_server, O_CREAT, 0666, 0);
+
+    // Registrar cliente
+    register_client(pid);
+
+    // Login
+    login_interface(username, password);
+    snprintf(data->message, MAX_MSG, "LOGIN|%s|%s", username, password);
+    sem_post(client_sem);
+    sem_wait(server_sem);
+
+    if (strcmp(data->message, "OK") == 0) {
+
+        int salir = 0;
+        while (!salir) {
+            int opcion = show_main_menu_ncurses();  // 0: canciones, 1: logout
+
+            switch (opcion) {
+                case 0: {
+                    // Solicitar canciones al servidor
+                    snprintf(data->message, MAX_MSG, "SONGS");
+                    sem_post(client_sem);
+                    sem_wait(server_sem);
+
+                    if (strncmp(data->message, "SONGS|", 6) == 0) {
+                        char *lista = data->message + 6;
+                        char *cancion = strtok(lista, ";");
+                        char *canciones[MAX_CANCIONES];
+                        int total = 0;
+
+                        while (cancion && total < MAX_CANCIONES) {
+                            canciones[total++] = strdup(cancion);
+                            cancion = strtok(NULL, ";");
+                        }
+
+                        show_songs_ncurses(canciones, total);
+
+                        for (int i = 0; i < total; i++) {
+                            free(canciones[i]);
+                        }
+                    } else {
+                        printf("⚠️ %s\n", data->message);
+                    }
+                    break;
+                }
+                case 1:
+                    snprintf(data->message, MAX_MSG, "LOGOUT");
+                    sem_post(client_sem);
+                    salir = 1;
+                    break;
+                default:
+                    printf("❌ Opción inválida\n");
+            }
+        }
+    } else {
+        printf("\n❌ Error de autenticación.\n");
+    }
+
+    // Limpieza
+    munmap(data, sizeof(SharedData));
+    close(shm_fd);
+    sem_close(client_sem);
+    sem_close(server_sem);
+    shm_unlink(shm_name);
+    sem_unlink(sem_client);
+    sem_unlink(sem_server);
+
     return 0;
 }
