@@ -14,6 +14,7 @@
 int authenticate(const char *username, const char *password);
 void handle_songs_request(SharedData *data);
 void handle_search_request(SharedData *data);
+void handle_get_request(SharedData *data, sem_t *client_sem, sem_t *server_sem);
 void unregister_client(pid_t pid);
 void *handle_client(void *arg);
 void cleanup(int sig);
@@ -40,7 +41,6 @@ int authenticate(const char *username, const char *password) {
     return 0;
 }
 
-
 void handle_songs_request(SharedData *data) {
     FILE *file = fopen("data/songs.txt", "r");
     if (!file) {
@@ -54,8 +54,9 @@ void handle_songs_request(SharedData *data) {
 
     while (fgets(line, sizeof(line), file)) {
         line[strcspn(line, "\n")] = '\0';
+        char *title = strtok(line, ":");
         if (!first) strncat(buffer, ";", MAX_MSG - strlen(buffer) - 1);
-        strncat(buffer, line, MAX_MSG - strlen(buffer) - 1);
+        strncat(buffer, title, MAX_MSG - strlen(buffer) - 1);
         first = 0;
     }
 
@@ -80,7 +81,8 @@ void handle_search_request(SharedData *data) {
         line[strcspn(line, "\n")] = '\0';
         if (strstr(line, term)) {
             if (found) strncat(result, ";", MAX_MSG - strlen(result) - 1);
-            strncat(result, line, MAX_MSG - strlen(result) - 1);
+            char *title = strtok(line, ":");
+            strncat(result, title, MAX_MSG - strlen(result) - 1);
             found = 1;
         }
     }
@@ -93,6 +95,58 @@ void handle_search_request(SharedData *data) {
     }
 }
 
+void handle_get_request(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
+    char *requested_title = data->message + 4;
+
+    FILE *file = fopen("data/songs.txt", "r");
+    if (!file) {
+        snprintf(data->message, MAX_MSG, "ERROR|songs.txt not found");
+        sem_post(server_sem);
+        return;
+    }
+
+    char line[256];
+    char filepath[256] = "";
+    while (fgets(line, sizeof(line), file)) {
+        line[strcspn(line, "\n")] = '\0';
+
+        char *title = strtok(line, ":");
+        strtok(NULL, ":"); // Skip artist
+        char *path = strtok(NULL, ":");
+
+        if (title && path && strcmp(title, requested_title) == 0) {
+            strncpy(filepath, path, sizeof(filepath));
+            break;
+        }
+    }
+    fclose(file);
+
+    if (strlen(filepath) == 0) {
+        snprintf(data->message, MAX_MSG, "ERROR|Song not found");
+        sem_post(server_sem);
+        return;
+    }
+
+    FILE *fp = fopen(filepath, "rb");
+    if (!fp) {
+        snprintf(data->message, MAX_MSG, "ERROR|File could not be opened");
+        sem_post(server_sem);
+        return;
+    }
+
+    while (1) {
+        int bytes = fread(data->audio_chunk, 1, AUDIO_CHUNK_SIZE, fp);
+        data->chunk_size = bytes;
+        data->is_last_chunk = feof(fp) ? 1 : 0;
+
+        sem_post(server_sem);
+        sem_wait(client_sem);
+
+        if (data->is_last_chunk) break;
+    }
+
+    fclose(fp);
+}
 
 void unregister_client(pid_t pid) {
     sem_t *reg_sem = sem_open(REGISTRY_SEM_NAME, 0);
@@ -130,7 +184,6 @@ void unregister_client(pid_t pid) {
     sem_post(reg_sem);
     sem_close(reg_sem);
 }
-
 
 void *handle_client(void *arg) {
     pid_t pid = *(pid_t *)arg;
@@ -194,6 +247,10 @@ void *handle_client(void *arg) {
         else if (strncmp(data->message, "SEARCH|", 7) == 0) {
             handle_search_request(data);
         }
+        else if (strncmp(data->message, "GET|", 4) == 0) {
+            handle_get_request(data, client_sem, server_sem);
+            continue;
+        }
 
         sem_post(server_sem);
     }
@@ -205,14 +262,12 @@ void *handle_client(void *arg) {
     pthread_exit(NULL);
 }
 
-
 void cleanup(int sig) {
     printf("\nCleaning up resources...\n");
     sem_unlink(REGISTRY_SEM_NAME);
     shm_unlink(REGISTRY_SHM_NAME);
     exit(0);
 }
-
 
 int main() {
     signal(SIGINT, cleanup);

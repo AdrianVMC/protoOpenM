@@ -3,7 +3,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <stdio.h>
 #include <fcntl.h>
 #include <sys/mman.h>
 #include <semaphore.h>
@@ -13,18 +12,18 @@
 
 #define LOGIN_INPUT_MAX 64
 #define MAX_SONGS 50
-#define NUM_OPTIONS 3
+#define NUM_OPTIONS 4
 
 const char *menu_options[NUM_OPTIONS] = {
     "View songs",
     "Search song",
+    "Reproduce song",
     "Logout"
 };
 
 void clean_screen() {
     printf("\033[H\033[J");
 }
-
 
 int show_main_menu_ncurses() {
     clean_screen();
@@ -73,6 +72,52 @@ int show_main_menu_ncurses() {
     }
 }
 
+void prompt_song_name(char *buffer, size_t size) {
+    clean_screen();
+    printf("Enter the exact name of the song:");
+    fgets(buffer, size, stdin);
+    buffer[strcspn(buffer, "\n")] = '\0';
+}
+
+void download_and_play_song(SharedData *data, sem_t *client_sem, sem_t *server_sem, const char *song_name) {
+    snprintf(data->message, MAX_MSG, "GET|%s", song_name);
+    sem_post(client_sem);
+
+    char temp_filename[128];
+    snprintf(temp_filename, sizeof(temp_filename), "/tmp/%s_temp.mp3", song_name);
+    FILE *fp = fopen(temp_filename, "wb");
+
+    while (1) {
+        sem_wait(server_sem);
+        fwrite(data->audio_chunk, 1, data->chunk_size, fp);
+        sem_post(client_sem);
+        if (data->is_last_chunk) break;
+    }
+
+    fclose(fp);
+
+    char command[256];
+    snprintf(command, sizeof(command), "mpg123 \"%s\"", temp_filename);
+    system(command);
+
+    remove(temp_filename);
+}
+
+void play_song_by_name(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
+    char song_name[64];
+    prompt_song_name(song_name, sizeof(song_name));
+
+    if (strlen(song_name) == 0) {
+        printf("You did not enter any name.\n");
+        printf("Press Enter to return to the menu ...");
+        getchar();
+        return;
+    }
+
+    download_and_play_song(data, client_sem, server_sem, song_name);
+    printf("\nFinished reproduction. Press Enter to return to the menu ...");
+    getchar();
+}
 
 void login_interface(char *username, char *password) {
     clean_screen();
@@ -99,30 +144,35 @@ void login_interface(char *username, char *password) {
     endwin();
 }
 
-
 void view_songs(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
     clean_screen();
-    snprintf(data->message, MAX_MSG, "SONGS");
-    sem_post(client_sem);
-    sem_wait(server_sem);
 
-    if (strncmp(data->message, "SONGS|", 6) == 0) {
-        char *list = data->message + 6;
-        char *song = strtok(list, ";");
-        int index = 1;
-        printf("\nAvailable songs:\n");
-        while (song) {
-            printf("  %2d. %s\n", index++, song);
-            song = strtok(NULL, ";");
-        }
-    } else {
-        printf("%s\n", data->message);
+    FILE *file = fopen("data/songs.txt", "r");
+    if (!file) {
+        printf("Could not open songs.txt\n");
+        printf("Press Enter to return to the menu ...");
+        getchar();
+        return;
     }
 
-    printf("\nPress ENTER to return to the menu...");
+    printf("\nAvailable songs:\n");
+    char line[256];
+    int index = 1;
+    while (fgets(line, sizeof(line), file)) {
+        line[strcspn(line, "\n")] = '\0';
+
+        char *title = strtok(line, ":");
+        char *artist = strtok(NULL, ":");
+
+        if (title && artist) {
+            printf("  %2d. %s — %s\n", index++, title, artist);
+        }
+    }
+    fclose(file);
+
+    printf("\nPress Enter to return to the menu ...");
     getchar();
 }
-
 
 void search_song(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
     clean_screen();
@@ -151,7 +201,6 @@ void search_song(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
     printf("\nPress ENTER to return to the menu...");
     getchar();
 }
-
 
 int main() {
     char username[LOGIN_INPUT_MAX];
@@ -189,6 +238,9 @@ int main() {
                     search_song(data, client_sem, server_sem);
                     break;
                 case 2:
+                    play_song_by_name(data, client_sem, server_sem);
+                    break;
+                case 3:
                     snprintf(data->message, MAX_MSG, "LOGOUT");
                     sem_post(client_sem);
                     exit_program = 1;
