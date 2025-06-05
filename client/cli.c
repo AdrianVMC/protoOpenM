@@ -183,7 +183,7 @@ int main() {
             }
         }
     } else {
-        printf("\n❌ Error de autenticación.\n");
+        printf("\n❌ Error de autenticacion.\n");
     }
 
     // Limpieza
