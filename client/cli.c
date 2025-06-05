@@ -40,7 +40,7 @@ int show_main_menu_ncurses() {
 
     while (1) {
         clear();
-        mvprintw(1, 2, "🎵 Main Menu");
+        mvprintw(1, 2, "Main Menu");
 
         for (int i = 0; i < NUM_OPTIONS; i++) {
             if (i == highlight) {
@@ -81,7 +81,7 @@ void login_interface(char *username, char *password) {
     cbreak();
 
     int y = 5, x = 10;
-    mvprintw(y, x, "🔐 Login System");
+    mvprintw(y, x, "Login System");
     mvprintw(y + 2, x, "Username: ");
     echo();
     getnstr(username, LOGIN_INPUT_MAX);
@@ -110,13 +110,13 @@ void view_songs(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
         char *list = data->message + 6;
         char *song = strtok(list, ";");
         int index = 1;
-        printf("\n🎵 Available songs:\n");
+        printf("\nAvailable songs:\n");
         while (song) {
             printf("  %2d. %s\n", index++, song);
             song = strtok(NULL, ";");
         }
     } else {
-        printf("⚠️ %s\n", data->message);
+        printf("%s\n", data->message);
     }
 
     printf("\nPress ENTER to return to the menu...");
@@ -127,7 +127,7 @@ void view_songs(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
 void search_song(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
     clean_screen();
     char search_term[64];
-    printf("\n🔎 Enter the name or part of the song title: ");
+    printf("\nEnter the name or part of the song title: ");
     fgets(search_term, sizeof(search_term), stdin);
     search_term[strcspn(search_term, "\n")] = '\0';
 
@@ -139,13 +139,13 @@ void search_song(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
         char *list = data->message + 6;
         char *song = strtok(list, ";");
         int index = 1;
-        printf("\n🎶 Search results:\n");
+        printf("\nSearch results:\n");
         while (song) {
             printf("  %2d. %s\n", index++, song);
             song = strtok(NULL, ";");
         }
     } else {
-        printf("⚠️ %s\n", data->message);
+        printf("%s\n", data->message);
     }
 
     printf("\nPress ENTER to return to the menu...");
@@ -175,7 +175,7 @@ int main() {
     sem_wait(server_sem);
 
     if (strcmp(data->message, "OK") == 0) {
-        printf("\n✔️ Welcome, %s\n", username);
+        printf("\n️Welcome, %s\n", username);
 
         int exit_program = 0;
         while (!exit_program) {
@@ -194,11 +194,11 @@ int main() {
                     exit_program = 1;
                     break;
                 default:
-                    printf("❌ Invalid option\n");
+                    printf("Invalid option\n");
             }
         }
     } else {
-        printf("\n❌ Authentication failed.\n");
+        printf("\nAuthentication failed.\n");
     }
 
     munmap(data, sizeof(SharedData));

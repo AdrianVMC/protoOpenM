@@ -207,7 +207,7 @@ void *handle_client(void *arg) {
 
 
 void cleanup(int sig) {
-    printf("\n🧹 Cleaning up resources...\n");
+    printf("\nCleaning up resources...\n");
     sem_unlink(REGISTRY_SEM_NAME);
     shm_unlink(REGISTRY_SHM_NAME);
     exit(0);
