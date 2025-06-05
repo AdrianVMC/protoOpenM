@@ -11,13 +11,14 @@ make
 ## Ejecución
 
 ```bash
-./openMS
+./build/server
+./build/client
 ```
 
 ## Archivos de datos
 
-- `data/users.txt`: `usuario,contraseña`
-- `data/songs.txt`: `título,artista`
+- `data/users.txt`: `usuario:contraseña`
+- `data/songs.txt`: `título:artista:archivo:duración`
 
 ## Limpieza
 
@@ -27,6 +28,6 @@ make clean
 
 ## Estado
 
-- [x] Registro de usuarios
-- [x] Inicio de sesión
+- [x] Inicio de sesión (Autenticado)
+- [x] Cerrar Sesión
 - [x] Ver canciones
