@@ -220,7 +220,7 @@ void *handle_client(void *arg) {
         pthread_exit(NULL);
     }
 
-    printf("Handling client PID: %d\n", pid);
+    printf("Attending PID client: %d\n", pid);
 
     while (1) {
         if (sem_wait(client_sem) == -1) break;
@@ -230,14 +230,14 @@ void *handle_client(void *arg) {
             char *password = strtok(NULL, "|");
             if (username && password && authenticate(username, password)) {
                 snprintf(data->message, MAX_MSG, "OK");
-                printf("Authenticated user: %s\n", username);
+                printf("Verified client: %s\n", username);
             } else {
                 snprintf(data->message, MAX_MSG, "ERROR");
-                printf("Invalid credentials: %s\n", username ? username : "NULL");
+                printf("Invalid password or user: %s\n", username ? username : "NULL");
             }
         }
         else if (strncmp(data->message, "LOGOUT", 6) == 0) {
-            printf("Client PID %d logged out\n", pid);
+            printf("Client PID %d logout\n", pid);
             unregister_client(pid);
             break;
         }
@@ -263,7 +263,7 @@ void *handle_client(void *arg) {
 }
 
 void cleanup(int sig) {
-    printf("\nCleaning up resources...\n");
+    printf("\nCleaning resources...\n");
     sem_unlink(REGISTRY_SEM_NAME);
     shm_unlink(REGISTRY_SHM_NAME);
     exit(0);
@@ -282,7 +282,7 @@ int main() {
     }
 
     reg->count = 0;
-    printf("Server started. Waiting for clients...\n");
+    printf("Initialized Server. Waiting for clients...\n");
 
     pid_t handled[MAX_CLIENTS] = {0};
     int handled_count = 0;
