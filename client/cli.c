@@ -183,60 +183,93 @@ void login_interface(char *username, char *password) {
     cbreak();
     noecho();
     curs_set(1);
+    keypad(stdscr, TRUE);
 
     int y = 5, x = 10;
 
-    // === Obtener username (no vacío) ===
+    int exit_flag = 0;
     do {
         clear();
         mvprintw(y, x, "Login System");
         mvprintw(y + 2, x, "Username (cannot be empty): ");
+        mvprintw(y + 8, x, "Press ESC to exit");
         echo();
-        move(y + 2, x + 29); // Mover cursor justo después del mensaje
-        getnstr(username, LOGIN_INPUT_MAX - 1);
-        noecho();
-    } while (strlen(username) == 0);
+        move(y + 2, x + 29);
 
-    // === Obtener contraseña (no vacía, oculta con '*') ===
-    int valid_password = 0;
-    while (!valid_password) {
-        memset(password, 0, LOGIN_INPUT_MAX); // Limpiar buffer
-        mvprintw(y + 4, x, "Password (cannot be empty): ");
-        move(y + 4, x + 29);
-
-        int i = 0, ch;
+        int ch, i = 0;
         while ((ch = getch()) != '\n' && i < LOGIN_INPUT_MAX - 1) {
-            if (ch == KEY_BACKSPACE || ch == 127) {
+            if (ch == 27) {
+                exit_flag = 1;
+                break;
+            } else if (ch == KEY_BACKSPACE || ch == 127) {
                 if (i > 0) {
                     i--;
-                    mvaddch(y + 4, x + 29 + i, ' ');
-                    move(y + 4, x + 29 + i);
+                    mvaddch(y + 2, x + 29 + i, ' ');
+                    move(y + 2, x + 29 + i);
                 }
-            } else if (ch >= 32 && ch <= 126) { // Caracteres imprimibles
-                password[i++] = ch;
-                mvaddch(y + 4, x + 29 + i - 1, '*');
+            } else if (ch >= 32 && ch <= 126) {
+                username[i++] = ch;
+                mvaddch(y + 2, x + 29 + i - 1, ch);
             }
         }
-        password[i] = '\0';
+        username[i] = '\0';
+        noecho();
+        if (exit_flag) break;
+    } while (strlen(username) == 0);
 
-        // Validar
-        move(y + 6, x);
-        clrtoeol();  // Limpiar mensaje previo
-        if (strlen(password) == 0) {
-            mvprintw(y + 6, x, "Password cannot be empty. Try again.");
-        } else {
-            valid_password = 1;
+    if (!exit_flag) {
+        int valid_password = 0;
+        while (!valid_password) {
+            memset(password, 0, LOGIN_INPUT_MAX);
+            mvprintw(y + 4, x, "                                 ");
+            mvprintw(y + 4, x, "Password (cannot be empty): ");
+            move(y + 4, x + 29);
+
+            int i = 0, ch;
+            while ((ch = getch()) != '\n' && i < LOGIN_INPUT_MAX - 1) {
+                if (ch == 27) {
+                    exit_flag = 1;
+                    break;
+                } else if (ch == KEY_BACKSPACE || ch == 127) {
+                    if (i > 0) {
+                        i--;
+                        mvaddch(y + 4, x + 29 + i, ' ');
+                        move(y + 4, x + 29 + i);
+                    }
+                } else if (ch >= 32 && ch <= 126) {
+                    password[i++] = ch;
+                    mvaddch(y + 4, x + 29 + i - 1, '*');
+                }
+            }
+            password[i] = '\0';
+            if (exit_flag) break;
+
+            move(y + 6, x);
+            clrtoeol();
+            if (strlen(password) == 0) {
+                mvprintw(y + 6, x, "Password cannot be empty. Try again.");
+            } else {
+                valid_password = 1;
+            }
         }
     }
 
-    // Confirmación
-    mvprintw(y + 6, x, "Authenticating...");
-    refresh();
-    sleep(1);
+    if (!exit_flag) {
+        mvprintw(y + 6, x, "Authenticating...");
+        refresh();
+        sleep(1);
+    }
 
     clear();
     endwin();
+
+    if (exit_flag) {
+        username[0] = '\0';
+        password[0] = '\0';
+    }
 }
+
+
 
 
 
@@ -362,6 +395,10 @@ int main() {
     snprintf(data->message, MAX_MSG, "LOGIN|%s|%s", username, password);
     sem_post(client_sem);
     sem_wait(server_sem);
+
+    if (strlen(username) == 0 || strlen(password) == 0) {
+        printf("Login cancelled.\n");
+    }
 
     if (strcmp(data->message, "OK") == 0) {
         printf("\n️Welcome, %s\n", username);
