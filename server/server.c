@@ -234,6 +234,7 @@ void *handle_client(void *arg) {
             } else {
                 snprintf(data->message, MAX_MSG, "ERROR");
                 printf("Invalid password or user: %s\n", username ? username : "NULL");
+                unregister_client(pid);
             }
         }
         else if (strncmp(data->message, "LOGOUT", 6) == 0) {
