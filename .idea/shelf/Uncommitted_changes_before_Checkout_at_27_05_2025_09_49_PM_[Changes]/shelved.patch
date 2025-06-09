@@ -1,0 +1,59 @@
+Index: .idea/workspace.xml
+IDEA additional info:
+Subsystem: com.intellij.openapi.diff.impl.patch.BaseRevisionTextPatchEP
+<+><?xml version=\"1.0\" encoding=\"UTF-8\"?>\r\n<project version=\"4\">\r\n  <component name=\"AutoImportSettings\">\r\n    <option name=\"autoReloadType\" value=\"SELECTIVE\" />\r\n  </component>\r\n  <component name=\"BackendCodeEditorMiscSettings\">\r\n    <option name=\"/Default/RiderDebugger/RiderRestoreDecompile/RestoreDecompileSetting/@EntryValue\" value=\"false\" type=\"bool\" />\r\n    <option name=\"/Default/Housekeeping/GlobalSettingsUpgraded/IsUpgraded/@EntryValue\" value=\"true\" type=\"bool\" />\r\n    <option name=\"/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexedValue\" value=\"true\" type=\"bool\" />\r\n    <option name=\"/Default/Housekeeping/FeatureSuggestion/FeatureSuggestionManager/DisabledSuggesters/=SwitchToGoToActionSuggester/@EntryIndexRemoved\" />\r\n  </component>\r\n  <component name=\"CMakeProjectFlavorService\">\r\n    <option name=\"flavorId\" value=\"CMakePlainProjectFlavor\" />\r\n  </component>\r\n  <component name=\"CMakeSettings\">\r\n    <configurations>\r\n      <configuration PROFILE_NAME=\"Debug\" ENABLED=\"true\" CONFIG_NAME=\"Debug\" />\r\n    </configurations>\r\n  </component>\r\n  <component name=\"ChangeListManager\">\r\n    <list default=\"true\" id=\"598f143b-b9e9-4ccb-aae6-55d5a8be9724\" name=\"Changes\" comment=\"Prueba 1.\">\r\n      <change beforePath=\"$PROJECT_DIR$/.idea/workspace.xml\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/.idea/workspace.xml\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/Makefile\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/Makefile\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/include/songs.h\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/include/songs.h\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/server/songs.c\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/server/songs.c\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/server/users.c\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/server/users.c\" afterDir=\"false\" />\r\n      <change beforePath=\"$PROJECT_DIR$/utils/file_utils.c\" beforeDir=\"false\" afterPath=\"$PROJECT_DIR$/utils/file_utils.c\" afterDir=\"false\" />\r\n    </list>\r\n    <option name=\"SHOW_DIALOG\" value=\"false\" />\r\n    <option name=\"HIGHLIGHT_CONFLICTS\" value=\"true\" />\r\n    <option name=\"HIGHLIGHT_NON_ACTIVE_CHANGELIST\" value=\"false\" />\r\n    <option name=\"LAST_RESOLUTION\" value=\"IGNORE\" />\r\n  </component>\r\n  <component name=\"ClangdSettings\">\r\n    <option name=\"formatViaClangd\" value=\"false\" />\r\n  </component>\r\n  <component name=\"Git.Settings\">\r\n    <excluded-from-favorite>\r\n      <branch-storage>\r\n        <map>\r\n          <entry type=\"LOCAL\">\r\n            <value>\r\n              <list>\r\n                <branch-info repo=\"$PROJECT_DIR$\" source=\"main\" />\r\n              </list>\r\n            </value>\r\n          </entry>\r\n        </map>\r\n      </branch-storage>\r\n    </excluded-from-favorite>\r\n    <option name=\"RECENT_BRANCH_BY_REPOSITORY\">\r\n      <map>\r\n        <entry key=\"$PROJECT_DIR$\" value=\"main\" />\r\n      </map>\r\n    </option>\r\n    <option name=\"RECENT_GIT_ROOT_PATH\" value=\"$PROJECT_DIR$\" />\r\n  </component>\r\n  <component name=\"GitHubPullRequestSearchHistory\">{\r\n  &quot;lastFilter&quot;: {\r\n    &quot;state&quot;: &quot;OPEN&quot;,\r\n    &quot;assignee&quot;: &quot;SantiAsu&quot;\r\n  }\r\n}</component>\r\n  <component name=\"GithubPullRequestsUISettings\">{\r\n  &quot;selectedUrlAndAccountId&quot;: {\r\n    &quot;url&quot;: &quot;https://github.com/AdrianVMC/protoOpenM.git&quot;,\r\n    &quot;accountId&quot;: &quot;09bbf09c-4819-4d5b-93d2-323eca6e089a&quot;\r\n  }\r\n}</component>\r\n  <component name=\"MakefileLocalSettings\">\r\n    <option name=\"projectSyncType\">\r\n      <map>\r\n        <entry key=\"$PROJECT_DIR$\" value=\"RE_IMPORT\" />\r\n      </map>\r\n    </option>\r\n  </component>\r\n  <component name=\"ProjectApplicationVersion\">\r\n    <option name=\"ide\" value=\"CLion\" />\r\n    <option name=\"majorVersion\" value=\"2024\" />\r\n    <option name=\"minorVersion\" value=\"3.4\" />\r\n    <option name=\"productBranch\" value=\"Classic\" />\r\n  </component>\r\n  <component name=\"ProjectColorInfo\">{\r\n  &quot;associatedIndex&quot;: 1\r\n}</component>\r\n  <component name=\"ProjectId\" id=\"2xaB6I2pwwBOUGQ31lGcixMF9lW\" />\r\n  <component name=\"ProjectViewState\">\r\n    <option name=\"hideEmptyMiddlePackages\" value=\"true\" />\r\n    <option name=\"showLibraryContents\" value=\"true\" />\r\n  </component>\r\n  <component name=\"PropertiesComponent\">{\r\n  &quot;keyToString&quot;: {\r\n    &quot;ASKED_SHARE_PROJECT_CONFIGURATION_FILES&quot;: &quot;true&quot;,\r\n    &quot;RunOnceActivity.RadMigrateCodeStyle&quot;: &quot;true&quot;,\r\n    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,\r\n    &quot;RunOnceActivity.cidr.known.project.marker&quot;: &quot;true&quot;,\r\n    &quot;RunOnceActivity.git.unshallow&quot;: &quot;true&quot;,\r\n    &quot;RunOnceActivity.readMode.enableVisualFormatting&quot;: &quot;true&quot;,\r\n    &quot;cf.first.check.clang-format&quot;: &quot;false&quot;,\r\n    &quot;cidr.known.project.marker&quot;: &quot;true&quot;,\r\n    &quot;git-widget-placeholder&quot;: &quot;SubMain1(S)&quot;,\r\n    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,\r\n    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,\r\n    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,\r\n    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,\r\n    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,\r\n    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,\r\n    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;\r\n  }\r\n}</component>\r\n  <component name=\"SpellCheckerSettings\" RuntimeDictionaries=\"0\" Folders=\"0\" CustomDictionaries=\"0\" DefaultDictionary=\"application-level\" UseSingleDictionary=\"true\" transferred=\"true\" />\r\n  <component name=\"TaskManager\">\r\n    <task active=\"true\" id=\"Default\" summary=\"Default task\">\r\n      <changelist id=\"598f143b-b9e9-4ccb-aae6-55d5a8be9724\" name=\"Changes\" comment=\"\" />\r\n      <created>1748166127641</created>\r\n      <option name=\"number\" value=\"Default\" />\r\n      <option name=\"presentableId\" value=\"Default\" />\r\n      <updated>1748166127641</updated>\r\n      <workItem from=\"1748166130210\" duration=\"1756000\" />\r\n      <workItem from=\"1748168930973\" duration=\"101000\" />\r\n      <workItem from=\"1748201915822\" duration=\"1714000\" />\r\n    </task>\r\n    <task id=\"LOCAL-00001\" summary=\"Prueba 1.\">\r\n      <option name=\"closed\" value=\"true\" />\r\n      <created>1748202979308</created>\r\n      <option name=\"number\" value=\"00001\" />\r\n      <option name=\"presentableId\" value=\"LOCAL-00001\" />\r\n      <option name=\"project\" value=\"LOCAL\" />\r\n      <updated>1748202979308</updated>\r\n    </task>\r\n    <option name=\"localTasksCounter\" value=\"2\" />\r\n    <servers />\r\n  </component>\r\n  <component name=\"TypeScriptGeneratedFilesManager\">\r\n    <option name=\"version\" value=\"3\" />\r\n  </component>\r\n  <component name=\"VcsManagerConfiguration\">\r\n    <MESSAGE value=\"Prueba 1.\" />\r\n    <option name=\"LAST_COMMIT_MESSAGE\" value=\"Prueba 1.\" />\r\n  </component>\r\n</project>
+===================================================================
+diff --git a/.idea/workspace.xml b/.idea/workspace.xml
+--- a/.idea/workspace.xml	(revision 9cbb67a36b8a94507a8904c5ba3a997c65cd86b6)
++++ b/.idea/workspace.xml	(date 1748215202470)
+@@ -18,13 +18,8 @@
+     </configurations>
+   </component>
+   <component name="ChangeListManager">
+-    <list default="true" id="598f143b-b9e9-4ccb-aae6-55d5a8be9724" name="Changes" comment="Prueba 1.">
++    <list default="true" id="598f143b-b9e9-4ccb-aae6-55d5a8be9724" name="Changes" comment="Prueba 2.">
+       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/Makefile" beforeDir="false" afterPath="$PROJECT_DIR$/Makefile" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/include/songs.h" beforeDir="false" afterPath="$PROJECT_DIR$/include/songs.h" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/server/songs.c" beforeDir="false" afterPath="$PROJECT_DIR$/server/songs.c" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/server/users.c" beforeDir="false" afterPath="$PROJECT_DIR$/server/users.c" afterDir="false" />
+-      <change beforePath="$PROJECT_DIR$/utils/file_utils.c" beforeDir="false" afterPath="$PROJECT_DIR$/utils/file_utils.c" afterDir="false" />
+     </list>
+     <option name="SHOW_DIALOG" value="false" />
+     <option name="HIGHLIGHT_CONFLICTS" value="true" />
+@@ -118,7 +113,7 @@
+       <updated>1748166127641</updated>
+       <workItem from="1748166130210" duration="1756000" />
+       <workItem from="1748168930973" duration="101000" />
+-      <workItem from="1748201915822" duration="1714000" />
++      <workItem from="1748201915822" duration="6224000" />
+     </task>
+     <task id="LOCAL-00001" summary="Prueba 1.">
+       <option name="closed" value="true" />
+@@ -128,7 +123,15 @@
+       <option name="project" value="LOCAL" />
+       <updated>1748202979308</updated>
+     </task>
+-    <option name="localTasksCounter" value="2" />
++    <task id="LOCAL-00002" summary="Prueba 2.">
++      <option name="closed" value="true" />
++      <created>1748203653698</created>
++      <option name="number" value="00002" />
++      <option name="presentableId" value="LOCAL-00002" />
++      <option name="project" value="LOCAL" />
++      <updated>1748203653698</updated>
++    </task>
++    <option name="localTasksCounter" value="3" />
+     <servers />
+   </component>
+   <component name="TypeScriptGeneratedFilesManager">
+@@ -136,6 +139,7 @@
+   </component>
+   <component name="VcsManagerConfiguration">
+     <MESSAGE value="Prueba 1." />
+-    <option name="LAST_COMMIT_MESSAGE" value="Prueba 1." />
++    <MESSAGE value="Prueba 2." />
++    <option name="LAST_COMMIT_MESSAGE" value="Prueba 2." />
+   </component>
+ </project>
+\ No newline at end of file

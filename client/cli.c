@@ -176,8 +176,7 @@ void play_song_by_name(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
     getchar();
 }
 
-
-void login_interface(char *username, char *password) {
+void login_interface(char *username, char *password, SharedData *data, sem_t *client_sem, sem_t *server_sem) {
     clean_screen();
     initscr();
     cbreak();
@@ -254,19 +253,27 @@ void login_interface(char *username, char *password) {
         }
     }
 
-    if (!exit_flag) {
-        mvprintw(y + 6, x, "Authenticating...");
-        refresh();
-        sleep(1);
-    }
-
-    clear();
-    endwin();
-
     if (exit_flag) {
         username[0] = '\0';
         password[0] = '\0';
     }
+
+    // Enviar las credenciales al servidor para autenticación
+    snprintf(data->message, MAX_MSG, "LOGIN|%s|%s", username, password);
+    sem_post(client_sem); // Enviar credenciales al servidor
+    sem_wait(server_sem); // Esperar respuesta del servidor
+
+    if (strcmp(data->message, "OK") == 0) {
+        mvprintw(y + 6, x, "Authentication successful.");
+        refresh();
+    } else {
+        mvprintw(y + 6, x, "Authentication failed.");
+        refresh();
+    }
+
+    getch();
+    clear();
+    endwin();
 }
 
 
