@@ -127,7 +127,8 @@ void register_interface(char *username, char *password, SharedData *data, sem_t 
             printf("Error registering user: %s\n", data->message);
         }
 
-        printf("Press Enter to return to menu...");
+        printf("Press Enter to return to menu...Please");
         getchar();
     }
+
 }
