@@ -1,2 +1,5 @@
-Shinunoga E wa:Fujii Kaze:data/audio/shinunogaEwa_audio.mp3:96
-La Grasa:Rey Graso:data/audio/lagrasa_audio.mp3:182
+Shinunoga E wa:Fujii Kaze:data/audio/shinunogaEwa_audio.mp3
+La Grasa:Rey Graso:data/audio/lagrasa_audio.mp3
+Full moon full life:Persona 3:data/audio/fullmoonfulllife_audio.mp3
+Snake Eater:Big Boss:data/audio/snakeeater_audio.mp3
+Balatro:Balatro Balatrez:data/audio/balatrotheme_audio.mp3
