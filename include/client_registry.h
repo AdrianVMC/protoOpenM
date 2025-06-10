@@ -3,14 +3,11 @@
 
 #include <sys/types.h>
 #include <semaphore.h>
-#include <shared.h>
-
-#define MAX_CLIENTS 10
-
+#include "shared.h"      /* ya arrastra MAX_CLIENTS desde config.h */
 
 typedef struct {
     pid_t pids[MAX_CLIENTS];
-    int count;
+    int   count;
 } ClientRegistry;
 
 void register_client(pid_t pid);

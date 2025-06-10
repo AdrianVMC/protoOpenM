@@ -1,26 +1,14 @@
 #ifndef SHARED_H
 #define SHARED_H
 
-#define MAX_MSG 1024
-#define AUDIO_CHUNK_SIZE 4096
+#include "config.h"          /* ← ahora hereda todas las constantes */
 
-#define SHM_NAME_LEN 64
-#define SEM_NAME_LEN 64
-
-#define SHM_PREFIX "/client_shm_"
-#define SEM_CLIENT_PREFIX "/client_sem_"
-#define SEM_SERVER_PREFIX "/server_sem_"
-
-#define REGISTRY_SHM_NAME "/client_registry_shm"
-#define REGISTRY_SEM_NAME "/client_registry_sem"
-#define MAX_CLIENTS 10
-
-
+/* ─────────── Estructura que comparten cliente y servidor ────────── */
 typedef struct {
-    char message[MAX_MSG];              // comandos y respuestas de texto
-    char audio_chunk[AUDIO_CHUNK_SIZE]; // bloque de datos binarios
-    int chunk_size;                     // cantidad real de bytes en audio_chunk
-    int is_last_chunk;                 // 1 si es el último fragmento
+    char message[MAX_MSG];               /* comandos / respuestas texto */
+    char audio_chunk[AUDIO_CHUNK_SIZE];  /* datos binarios de audio     */
+    int  chunk_size;                     /* bytes válidos en audio_chunk*/
+    int  is_last_chunk;                  /* 1 si es el último fragmento */
 } SharedData;
 
-#endif
+#endif /* SHARED_H */

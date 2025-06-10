@@ -1,3 +1,9 @@
+/*********************************************************************
+ *  client/cli.c  –  Cliente ncurses con login y registro integrados
+ *  Compila con: gcc -Wall -pthread -Iinclude cli.c ... -lncursesw -lssl -lcrypto
+ *********************************************************************/
+
+#include "config.h"
 #include <ncurses.h>
 #include <string.h>
 #include <stdio.h>
@@ -5,445 +11,240 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <sys/mman.h>
-#include <time.h>
 #include <signal.h>
 #include <sys/wait.h>
 #include <semaphore.h>
+#include <time.h>
+
 #include "../include/shared.h"
 #include "../include/shared_utils.h"
 #include "../include/client_registry.h"
+#include "../include/hash_utils.h"
 
-#define LOGIN_INPUT_MAX 64
-#define MAX_SONGS 50
-#define NUM_OPTIONS 4
-
-const char *menu_options[NUM_OPTIONS] = {
-    "View songs",
-    "Search song",
-    "Reproduce song",
-    "Logout"
+/* ──────────────────── Constantes y menús ──────────────────── */
+#define NUM_MAIN_OPTIONS 4
+static const char *main_opts[NUM_MAIN_OPTIONS] = {
+    "View songs", "Search song", "Reproduce song", "Logout"
 };
 
-void clean_screen() {
-    printf("\033[H\033[J");
+/* ──────────────────── Utilidades varias ──────────────────── */
+static inline void clear_term(void){ printf("\033[H\033[J"); }
+
+/* Duración aproximada de mp3 con ffprobe */
+static int mp3_duration(const char *file){
+    char cmd[256]; snprintf(cmd,sizeof cmd,
+        "ffprobe -v error -show_entries format=duration -of csv=p=0 \"%s\"",file);
+    FILE *fp=popen(cmd,"r"); if(!fp) return 30;
+    char buf[64]; if(!fgets(buf,sizeof buf,fp)){ pclose(fp); return 30; }
+    pclose(fp); return (int)(atof(buf)+0.5);
 }
 
-int get_mp3_duration(const char *filename) {
-    char command[256];
-    snprintf(command, sizeof(command),
-             "ffprobe -v error -show_entries format=duration -of csv=p=0 \"%s\"", filename);
+/* Barra de progreso con controles P/R/Q */
+static void show_progress_bar(int dur,pid_t pid_player){
+    int paused=0,elapsed=0,total_pause=0;
+    time_t start=time(NULL),pause_start=0;
 
-    FILE *fp = popen(command, "r");
-    if (!fp) return 30;
+    nodelay(stdscr,TRUE); curs_set(0); timeout(100);
 
-    char buffer[64];
-    if (fgets(buffer, sizeof(buffer), fp) == NULL) {
-        pclose(fp);
-        return 30;
-    }
+    while(elapsed<dur){
+        int ch=getch();
+        if((ch=='p'||ch=='P')&&!paused){ kill(pid_player,SIGSTOP); paused=1; pause_start=time(NULL); }
+        if((ch=='r'||ch=='R')&&paused){  kill(pid_player,SIGCONT); paused=0; total_pause+=(int)(time(NULL)-pause_start); }
+        if(ch=='q'||ch=='Q'){ kill(pid_player,SIGTERM); waitpid(pid_player,NULL,0); break; }
 
-    pclose(fp);
-    return (int)(atof(buffer) + 0.5);
-}
-
-void show_progress_bar(int duration, pid_t player_pid) {
-    int paused = 0;
-    int elapsed = 0;
-    time_t start = time(NULL);
-    time_t pause_start = 0;
-    int total_paused_time = 0;
-
-    nodelay(stdscr, TRUE);
-    curs_set(0);
-    timeout(100);
-
-    while (elapsed < duration) {
-        int ch = getch();
-
-        switch (ch) {
-            case 'p':
-            case 'P':
-                if (!paused) {
-                    kill(player_pid, SIGSTOP);
-                    paused = 1;
-                    pause_start = time(NULL);
-                }
-            break;
-            case 'r':
-            case 'R':
-                if (paused) {
-                    kill(player_pid, SIGCONT);
-                    paused = 0;
-                    total_paused_time += (int)(time(NULL) - pause_start);
-                }
-            break;
-            case 'q':
-            case 'Q':
-                kill(player_pid, SIGTERM);
-            waitpid(player_pid, NULL, 0);
-            nodelay(stdscr, FALSE);
-            curs_set(1);
-            return;
-        }
-
-        if (!paused) {
-            time_t now = time(NULL);
-            elapsed = (int)(now - start - total_paused_time);
-        }
+        if(!paused) elapsed=(int)(time(NULL)-start-total_pause);
 
         clear();
-        mvprintw(2, 2, "Playing song...");
-        mvprintw(3, 2, "Status: %s", paused ? "Paused" : "Playing");
-        mvprintw(5, 2, "Controls: [P]ause | [R]esume | [Q]uit");
+        mvprintw(2,2,"Playing song... (%s)",paused?"Paused":"Playing");
+        mvprintw(4,2,"[P]ause  [R]esume  [Q]uit");
 
-        mvprintw(7, 2, "[");
-        int bar_width = 50;
-        int pos = (elapsed * bar_width) / duration;
-        if (pos > bar_width) pos = bar_width;
-
-        for (int i = 0; i < bar_width; i++) {
-            printw(i < pos ? "=" : " ");
-        }
-        printw("] %d/%d sec", elapsed, duration);
+        mvprintw(6,2,"[");
+        int bar=50,pos=(elapsed*bar)/dur; if(pos>bar) pos=bar;
+        for(int i=0;i<bar;i++) addch(i<pos? '=':' ');
+        printw("] %d/%d sec",elapsed,dur);
         refresh();
     }
-
-    nodelay(stdscr, FALSE);
-    curs_set(1);
-    waitpid(player_pid, NULL, 0);
+    nodelay(stdscr,FALSE); curs_set(1); waitpid(pid_player,NULL,0);
 }
 
+/* Descarga canción, reproduce, muestra barra */
+static void download_and_play(SharedData *d,sem_t *csem,sem_t *ssem,const char *song){
+    clear_term();
+    snprintf(d->message,MAX_MSG,"GET|%s",song);
+    sem_post(csem);
 
+    char tmp[128]; snprintf(tmp,sizeof tmp,"/tmp/%s_tmp.mp3",song);
+    FILE *fp=fopen(tmp,"wb");
 
-
-void prompt_song_name(char *buffer, size_t size) {
-    clean_screen();
-    printf("Enter song's exact name: ");
-    fgets(buffer, size, stdin);
-    buffer[strcspn(buffer, "\n")] = '\0';
-}
-
-void download_and_play_song(SharedData *data, sem_t *client_sem, sem_t *server_sem, const char *song_name) {
-    clean_screen();
-    snprintf(data->message, MAX_MSG, "GET|%s", song_name);
-    sem_post(client_sem);
-
-    char temp_filename[128];
-    snprintf(temp_filename, sizeof(temp_filename), "/tmp/%s_temp.mp3", song_name);
-    FILE *fp = fopen(temp_filename, "wb");
-
-    while (1) {
-        sem_wait(server_sem);
-        fwrite(data->audio_chunk, 1, data->chunk_size, fp);
-        sem_post(client_sem);
-        if (data->is_last_chunk) break;
+    while(1){
+        sem_wait(ssem);
+        fwrite(d->audio_chunk,1,d->chunk_size,fp);
+        sem_post(csem);
+        if(d->is_last_chunk) break;
     }
-
     fclose(fp);
 
-    initscr();
-    noecho();
-    cbreak();
-
-    pid_t pid = fork();
-    if (pid == 0) {
-        execlp("mpg123", "mpg123", "--quiet", temp_filename, NULL);
-        perror("Error al ejecutar mpg123");
-        exit(1);
-    } else {
-        int duration = get_mp3_duration(temp_filename);
-        show_progress_bar(duration, pid);
+    initscr(); noecho(); cbreak();
+    pid_t pid=fork();
+    if(pid==0){ execlp("mpg123","mpg123","--quiet",tmp,NULL); perror("mpg123"); exit(1);}
+    else{
+        show_progress_bar(mp3_duration(tmp),pid);
     }
-
-    endwin();
-    remove(temp_filename);
-    clean_screen();
+    endwin(); remove(tmp); clear_term();
 }
 
-void play_song_by_name(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
-    clean_screen();
-    char song_name[64];
-    prompt_song_name(song_name, sizeof(song_name));
+/* ──────────────────── Vistas de menú ──────────────────── */
+static void play_song_by_name(SharedData *d,sem_t *csem,sem_t *ssem){
+    char name[64]; clear_term(); printf("Enter song name: ");
+    fgets(name,sizeof name,stdin); name[strcspn(name,"\n")]='\0';
+    if(name[0]=='\0'){ puts("No name entered. Enter to return."); getchar(); return; }
+    download_and_play(d,csem,ssem,name);
+    puts("\nPlayback finished. Enter to return..."); getchar();
+}
 
-    if (strlen(song_name) == 0) {
-        printf("No name given.\nPress Enter to go back to menu...");
-        getchar();
-        return;
+static void view_songs(SharedData *d,sem_t *csem,sem_t *ssem){
+    clear_term(); snprintf(d->message,MAX_MSG,"SONGS"); sem_post(csem); sem_wait(ssem);
+    if(!strncmp(d->message,"SONGS|",6)){
+        char list[MAX_MSG]; strncpy(list,d->message+6,sizeof list);
+        char *song=strtok(list,";"); int idx=1; puts("\nAvailable songs:");
+        while(song){ printf("  %2d. %s\n",idx++,song); song=strtok(NULL,";"); }
+    } else puts(d->message);
+    puts("\nEnter to return."); getchar();
+}
+
+static void search_song(SharedData *d,sem_t *csem,sem_t *ssem){
+    char term[64]; clear_term(); printf("Enter name fragment: ");
+    fgets(term,sizeof term,stdin); term[strcspn(term,"\n")]='\0';
+    snprintf(d->message,MAX_MSG,"SEARCH|%s",term); sem_post(csem); sem_wait(ssem);
+    if(!strncmp(d->message,"FOUND|",6)){
+        char list[MAX_MSG]; strncpy(list,d->message+6,sizeof list);
+        char *s=strtok(list,";"); int idx=1; puts("\nResults:");
+        while(s){ printf("  %2d. %s\n",idx++,s); s=strtok(NULL,";"); }
+    } else puts(d->message);
+    puts("\nEnter to return."); getchar();
+}
+
+/* Menú principal ncurses */
+static int show_main_menu_ncurses(void){
+    initscr(); noecho(); cbreak(); curs_set(0); keypad(stdscr,TRUE);
+    int hl=0,ch;
+    while(1){
+        clear(); mvprintw(1,2,"Main Menu");
+        for(int i=0;i<NUM_MAIN_OPTIONS;i++){
+            if(i==hl) attron(A_REVERSE);
+            mvprintw(3+i,4,"%s",main_opts[i]);
+            if(i==hl) attroff(A_REVERSE);
+        }
+        refresh();
+        ch=getch();
+        if(ch==KEY_UP)   hl=(hl==0)?NUM_MAIN_OPTIONS-1:hl-1;
+        if(ch==KEY_DOWN) hl=(hl+1)%NUM_MAIN_OPTIONS;
+        if(ch=='\n'){ endwin(); return hl; }
+        if(ch==27){ endwin(); return -1; }
     }
+}
 
-    download_and_play_song(data, client_sem, server_sem, song_name);
-    printf("\nReproduction Finalized. Press Enter to get back to menu...");
+/* ──────────────────── Registro remoto ──────────────────── */
+static void register_user_remote(const char *u,const char *p,
+                                 SharedData *d,sem_t *csem,sem_t *ssem){
+    char hash[HASH_STRING_LENGTH]; hash_sha256(p,hash);
+    snprintf(d->message,MAX_MSG,"REGISTER|%s|%s",u,hash);
+    sem_post(csem); sem_wait(ssem);
+    puts(strcmp(d->message,"OK")==0?
+         "\nUser created!  Enter to continue..." :
+         "\nRegister failed (user exists?)  Enter to continue...");
     getchar();
 }
 
-void login_interface(char *username, char *password, SharedData *data, sem_t *client_sem, sem_t *server_sem) {
-    clean_screen();
-    initscr();
-    cbreak();
-    noecho();
-    curs_set(1);
-    keypad(stdscr, TRUE);
-
-    int y = 5, x = 10;
-
-    int exit_flag = 0;
-    do {
-        clear();
-        mvprintw(y, x, "Login System");
-        mvprintw(y + 2, x, "Username (cannot be empty): ");
-        mvprintw(y + 8, x, "Press ESC to exit");
-        echo();
-        move(y + 2, x + 29);
-
-        int ch, i = 0;
-        while ((ch = getch()) != '\n' && i < LOGIN_INPUT_MAX - 1) {
-            if (ch == 27) {
-                exit_flag = 1;
-                break;
-            } else if (ch == KEY_BACKSPACE || ch == 127) {
-                if (i > 0) {
-                    i--;
-                    mvaddch(y + 2, x + 29 + i, ' ');
-                    move(y + 2, x + 29 + i);
-                }
-            } else if (ch >= 32 && ch <= 126) {
-                username[i++] = ch;
-                mvaddch(y + 2, x + 29 + i - 1, ch);
-            }
-        }
-        username[i] = '\0';
-        noecho();
-        if (exit_flag) break;
-    } while (strlen(username) == 0);
-
-    if (!exit_flag) {
-        int valid_password = 0;
-        while (!valid_password) {
-            memset(password, 0, LOGIN_INPUT_MAX);
-            mvprintw(y + 4, x, "                                 ");
-            mvprintw(y + 4, x, "Password (cannot be empty): ");
-            move(y + 4, x + 29);
-
-            int i = 0, ch;
-            while ((ch = getch()) != '\n' && i < LOGIN_INPUT_MAX - 1) {
-                if (ch == 27) {
-                    exit_flag = 1;
-                    break;
-                } else if (ch == KEY_BACKSPACE || ch == 127) {
-                    if (i > 0) {
-                        i--;
-                        mvaddch(y + 4, x + 29 + i, ' ');
-                        move(y + 4, x + 29 + i);
-                    }
-                } else if (ch >= 32 && ch <= 126) {
-                    password[i++] = ch;
-                    mvaddch(y + 4, x + 29 + i - 1, '*');
-                }
-            }
-            password[i] = '\0';
-            if (exit_flag) break;
-
-            move(y + 6, x);
-            clrtoeol();
-            if (strlen(password) == 0) {
-                mvprintw(y + 6, x, "Password cannot be empty. Try again.");
-            } else {
-                valid_password = 1;
-            }
-        }
-    }
-
-    if (exit_flag) {
-        username[0] = '\0';
-        password[0] = '\0';
-    }
-
-    // Enviar las credenciales al servidor para autenticación
-    snprintf(data->message, MAX_MSG, "LOGIN|%s|%s", username, password);
-    sem_post(client_sem); // Enviar credenciales al servidor
-    sem_wait(server_sem); // Esperar respuesta del servidor
-
-    if (strcmp(data->message, "OK") == 0) {
-        mvprintw(y + 6, x, "Authentication successful.");
-        refresh();
-    } else {
-        mvprintw(y + 6, x, "Authentication failed.");
-        refresh();
-    }
-
-    getch();
-    clear();
-    endwin();
+/* Interfaz registro ncurses */
+static void register_user_interface(char *u,char *p,
+                                    SharedData *d,sem_t *csem,sem_t *ssem){
+    initscr(); cbreak(); noecho(); curs_set(1); keypad(stdscr,TRUE);
+    int y=5,x=10; clear();
+    mvprintw(y  ,x,"Register New User");
+    mvprintw(y+2,x,"Username: "); echo(); move(y+2,x+10);
+    getnstr(u,LOGIN_INPUT_MAX-1); noecho();
+    mvprintw(y+4,x,"Password: "); move(y+4,x+10);
+    int i=0,ch; while((ch=getch())!='\n'&&i<LOGIN_INPUT_MAX-1){
+        if(ch>=32&&ch<=126){ p[i++]=ch; addch('*'); }
+    } p[i]='\0'; endwin();
+    if(u[0]&&p[0]) register_user_remote(u,p,d,csem,ssem);
 }
 
-
-
-
-
-
-void view_songs(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
-    clean_screen();
-    snprintf(data->message, MAX_MSG, "SONGS");
-    sem_post(client_sem);
-    sem_wait(server_sem);
-
-    clean_screen();
-    if (strncmp(data->message, "SONGS|", 6) == 0) {
-        char *list = data->message + 6;
-        char *song = strtok(list, ";");
-        int index = 1;
-        printf("\nAvailable songs:\n");
-        while (song) {
-            printf("  %2d. %s\n", index++, song);
-            song = strtok(NULL, ";");
-        }
-    } else {
-        printf("%s\n", data->message);
-    }
-
-    printf("\nPress Enter to return to the menu ...");
-    getchar();
+/* ──────────────────── Login ──────────────────── */
+static void login_interface(char *u,char *p,
+                            SharedData *d,sem_t *csem,sem_t *ssem){
+    clear_term(); initscr(); cbreak(); noecho(); curs_set(1); keypad(stdscr,TRUE);
+    int y=5,x=10; clear();
+    mvprintw(y,x,"Login");
+    mvprintw(y+2,x,"Username: "); echo(); move(y+2,x+10);
+    getnstr(u,LOGIN_INPUT_MAX-1); noecho();
+    mvprintw(y+4,x,"Password: "); move(y+4,x+10);
+    int i=0,ch; while((ch=getch())!='\n'&&i<LOGIN_INPUT_MAX-1){
+        if(ch>=32&&ch<=126){ p[i++]=ch; addch('*'); }
+    } p[i]='\0'; endwin();
+    if(u[0]&&p[0]){
+        snprintf(d->message,MAX_MSG,"LOGIN|%s|%s",u,p);
+        sem_post(csem); sem_wait(ssem);
+    } else { u[0]=p[0]='\0'; }
 }
 
-void search_song(SharedData *data, sem_t *client_sem, sem_t *server_sem) {
-    clean_screen();
-    char search_term[64];
-    printf("\nEnter the name or part of the song title: ");
-    fgets(search_term, sizeof(search_term), stdin);
-    search_term[strcspn(search_term, "\n")] = '\0';
-
-    snprintf(data->message, MAX_MSG, "SEARCH|%s", search_term);
-    sem_post(client_sem);
-    sem_wait(server_sem);
-
-    if (strncmp(data->message, "FOUND|", 6) == 0) {
-        char *list = data->message + 6;
-        char *song = strtok(list, ";");
-        int index = 1;
-        printf("\nSearch results:\n");
-        while (song) {
-            printf("  %2d. %s\n", index++, song);
-            song = strtok(NULL, ";");
-        }
-    } else {
-        printf("%s\n", data->message);
-    }
-
-    printf("\nPress ENTER to return to the menu...");
-    getchar();
-}
-
-
-int show_main_menu_ncurses() {
-    clean_screen();
-    initscr();
-    noecho();
-    cbreak();
-    curs_set(0);
-    keypad(stdscr, TRUE);
-
-    int highlight = 0;
-    int input;
-    int selected = -1;
-
-    while (1) {
-        clear();
-        mvprintw(1, 2, "Main Menu");
-
-        for (int i = 0; i < NUM_OPTIONS; i++) {
-            if (i == highlight) {
-                attron(A_REVERSE);
-                mvprintw(3 + i, 4, "> %s", menu_options[i]);
-                attroff(A_REVERSE);
-            } else {
-                mvprintw(3 + i, 6, "  %s", menu_options[i]);
-            }
-        }
-
-        refresh();
-        input = getch();
-        switch (input) {
-            case KEY_UP:
-                highlight = (highlight == 0) ? NUM_OPTIONS - 1 : highlight - 1;
-            break;
-            case KEY_DOWN:
-                highlight = (highlight + 1) % NUM_OPTIONS;
-            break;
-            case '\n':
-                selected = highlight;
-            endwin();
-            return selected;
-            case 27:
-                endwin();
-            return -1;
-        }
+/* ──────────────────── Menú inicial ──────────────────── */
+static int start_menu(void){
+    const char *opt[]={"Login","Register","Exit"}; int hl=0,ch;
+    initscr(); noecho(); cbreak(); curs_set(0); keypad(stdscr,TRUE);
+    while(1){
+        clear(); mvprintw(1,4,"Welcome to protoOpenM");
+        for(int i=0;i<3;i++){ if(i==hl) attron(A_REVERSE);
+            mvprintw(3+i,6,"%s",opt[i]); if(i==hl) attroff(A_REVERSE);}
+        refresh(); ch=getch();
+        if(ch==KEY_UP)   hl=(hl==0)?2:hl-1;
+        if(ch==KEY_DOWN) hl=(hl+1)%3;
+        if(ch=='\n'){ endwin(); return hl; }
     }
 }
 
+/* ──────────────────── main ──────────────────── */
+int main(void){
+    char user[LOGIN_INPUT_MAX]={0},pass[LOGIN_INPUT_MAX]={0};
+    pid_t pid=getpid();
+    char shm_name[64],sem_c[64],sem_s[64]; generate_names(shm_name,sem_c,sem_s,pid);
 
-
-int main() {
-    char username[LOGIN_INPUT_MAX];
-    char password[LOGIN_INPUT_MAX];
-    pid_t pid = getpid();
-
-    char shm_name[64], sem_client[64], sem_server[64];
-    generate_names(shm_name, sem_client, sem_server, pid);
-
-    int shm_fd = shm_open(shm_name, O_CREAT | O_RDWR, 0666);
-    ftruncate(shm_fd, sizeof(SharedData));
-    SharedData *data = mmap(0, sizeof(SharedData), PROT_READ | PROT_WRITE, MAP_SHARED, shm_fd, 0);
-    sem_t *client_sem = sem_open(sem_client, O_CREAT, 0666, 0);
-    sem_t *server_sem = sem_open(sem_server, O_CREAT, 0666, 0);
-
+    int shm_fd=shm_open(shm_name,O_CREAT|O_RDWR,0666);
+    ftruncate(shm_fd,sizeof(SharedData));
+    SharedData *d=mmap(NULL,sizeof(SharedData),PROT_READ|PROT_WRITE,MAP_SHARED,shm_fd,0);
+    sem_t *csem=sem_open(sem_c,O_CREAT,0666,0),*ssem=sem_open(sem_s,O_CREAT,0666,0);
     register_client(pid);
 
-    login_interface(username, password);
-    snprintf(data->message, MAX_MSG, "LOGIN|%s|%s", username, password);
-    sem_post(client_sem);
-    sem_wait(server_sem);
-
-    if (strlen(username) == 0 || strlen(password) == 0) {
-        printf("Login cancelled.\n");
+    /* ----- menú inicial ----- */
+    while(1){
+        int ch=start_menu();
+        if(ch==2) goto cleanup;
+        if(ch==1){ register_user_interface(user,pass,d,csem,ssem); continue; }
+        if(ch==0) break;
     }
 
-    if (strcmp(data->message, "OK") == 0) {
-        printf("\n️Welcome, %s\n", username);
+    login_interface(user,pass,d,csem,ssem);
+    if(user[0]=='\0'||pass[0]=='\0'||strcmp(d->message,"OK")!=0){
+        puts("Authentication failed or cancelled."); goto cleanup;
+    }
+    printf("\nWelcome, %s\n",user);
 
-        int exit_program = 0;
-        while (!exit_program) {
-            int option = show_main_menu_ncurses();
-
-            switch (option) {
-                case 0:
-                    view_songs(data, client_sem, server_sem);
-                    break;
-                case 1:
-                    search_song(data, client_sem, server_sem);
-                    break;
-                case 2:
-                    play_song_by_name(data, client_sem, server_sem);
-                    break;
-                case 3:
-                    snprintf(data->message, MAX_MSG, "LOGOUT");
-                    sem_post(client_sem);
-                    exit_program = 1;
-                    break;
-                default:
-                    printf("Invalid option\n");
-            }
+    /* ----- menú principal ----- */
+    int quit=0; while(!quit){
+        int opt=show_main_menu_ncurses();
+        switch(opt){
+            case 0: view_songs(d,csem,ssem); break;
+            case 1: search_song(d,csem,ssem); break;
+            case 2: play_song_by_name(d,csem,ssem); break;
+            case 3: snprintf(d->message,MAX_MSG,"LOGOUT"); sem_post(csem); quit=1; break;
+            default: quit=1; break;
         }
-    } else {
-        printf("\nAuthentication failed.\n");
     }
 
-    munmap(data, sizeof(SharedData));
-    close(shm_fd);
-    sem_close(client_sem);
-    sem_close(server_sem);
-    shm_unlink(shm_name);
-    sem_unlink(sem_client);
-    sem_unlink(sem_server);
-
+cleanup:
+    munmap(d,sizeof(SharedData)); close(shm_fd);
+    sem_close(csem); sem_close(ssem);
+    shm_unlink(shm_name); sem_unlink(sem_c); sem_unlink(sem_s);
     return 0;
 }
