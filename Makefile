@@ -12,8 +12,8 @@ UTILS_SRC    = utils/shared_utils.c utils/client_registry.c utils/hash_utils.c
 AUTH_SRC   = utils/authenticate.c            # ← nuevo
 
 # ──────────────── Objetivos ─────────────────────
-CLIENT_SRC   = client/cli.c
-SERVER_SRC   = server/server.c
+CLIENT_SRC = client/cli.c
+SERVER_SRC = server/server.c
 
 CLIENT_BIN   = $(BUILD_DIR)/client
 SERVER_BIN   = $(BUILD_DIR)/server
