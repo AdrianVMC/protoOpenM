@@ -35,11 +35,11 @@ void register_client(pid_t pid) {
 
     if (!already_registered && reg->count < MAX_CLIENTS) {
         reg->pids[reg->count++] = pid;
-        printf("✅ Cliente registrado (PID: %d)\n", pid);
+        printf("Reg Client", pid);
     } else if (already_registered) {
-        printf("ℹ️ Cliente ya registrado (PID: %d)\n", pid);
+        printf("Post Client", pid);
     } else {
-        fprintf(stderr, "❌ Registro lleno.\n");
+        fprintf(stderr, "Full access.\n");
     }
 
     munmap(reg, sizeof(ClientRegistry));

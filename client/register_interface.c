@@ -14,6 +14,7 @@
 #include "../include/shared_utils.h"
 #include "../include/client_registry.h"
 
+<<<<<<< Updated upstream
 #define LOGIN_INPUT_MAX 64
 #define MAX_SONGS 50
 #define NUM_OPTIONS 4
@@ -24,6 +25,22 @@ void hash_password(const char *password, char *output_hex) {
         sprintf(output_hex + (i * 2), "%02x", hash[i]);
     }
     output_hex[64] = '\0'; // SHA256 produce 64 caracteres hexadecimales
+=======
+void register_user(const char *username, const char *password) {
+    char hashed_password[HASH_STRING_LENGTH];
+    hash_sha256(password, hashed_password);
+
+    FILE *file = fopen("data/users.txt", "a");
+    if (!file) {
+        printf("Errors opening users\n");
+        return;
+    }
+
+    fprintf(file, "%s:%s\n", username, hashed_password);
+    fclose(file);
+
+    printf("User succesfully registered\n");
+>>>>>>> Stashed changes
 }
 
 void register_interface(char *username, char *password, SharedData *data, sem_t *client_sem, sem_t *server_sem) {
@@ -34,8 +51,14 @@ void register_interface(char *username, char *password, SharedData *data, sem_t 
     curs_set(1);
     keypad(stdscr, TRUE);
 
-    int y = 5, x = 10;
+    start_color();
+    use_default_colors();
+    init_pair(1, COLOR_WHITE, COLOR_BLUE);
+    init_pair(2, COLOR_BLACK, COLOR_CYAN);
+    bkgd(COLOR_PAIR(1));
+    refresh();
 
+<<<<<<< Updated upstream
     int exit_flag = 0;
     do {
         clear();
@@ -107,8 +130,41 @@ void register_interface(char *username, char *password, SharedData *data, sem_t 
         mvprintw(y + 6, x, "Registering...");
         refresh();
         sleep(1);
+=======
+    int y = 4, x = 6;
+    int w = 60, h = 10;
+    int startx = (COLS - w) / 2;
+    int starty = (LINES - h) / 2;
+
+    WINDOW *win = newwin(h, w, starty, startx);
+    wbkgd(win, COLOR_PAIR(1));
+    box(win, 0, 0);
+    wattron(win, A_BOLD);
+    mvwprintw(win, 1, 2, "Register New User");
+    wattroff(win, A_BOLD);
+    mvwprintw(win, 3, 2, "Username: ");
+    wrefresh(win);
+
+    move(starty + 3, startx + 21);
+    echo();
+    getnstr(username, LOGIN_INPUT_MAX - 1);
+    noecho();
+
+    mvwprintw(win, 5, 2, "Password: ");
+    wrefresh(win);
+    move(starty + 5, startx + 13);
+
+    int i = 0;
+    int ch;
+    while ((ch = getch()) != '\n' && i < LOGIN_INPUT_MAX - 1) {
+        if (ch >= 32 && ch <= 126) {
+            password[i++] = (char)ch;
+            mvaddch(starty + 5, startx + 13 + i - 1, '*');
+        }
+>>>>>>> Stashed changes
     }
 
+    delwin(win);
     clear();
     endwin();
 

@@ -1,3 +1,4 @@
+<<<<<<< Updated upstream
 # Makefile para protoOpenM con registro automático y ncurses
 
 CC = gcc
@@ -8,6 +9,19 @@ LDFLAGS += -lssl -lcrypto
 
 BUILD_DIR = build
 
+=======
+CC = gcc
+OPENSSL_DIR = /opt/homebrew/opt/openssl@3
+CFLAGS  = -Wall -pthread -Iinclude -I$(OPENSSL_DIR)/include
+LDFLAGS = -L$(OPENSSL_DIR)/lib -lssl -lcrypto
+NCURSES = -lncurses
+
+BUILD_DIR = build
+
+UTILS_SRC = utils/shared_utils.c utils/client_registry.c utils/hash_utils.c
+AUTH_SRC  = utils/authenticate.c
+
+>>>>>>> Stashed changes
 CLIENT_SRC = client/cli.c
 SERVER_SRC = server/server.c
 UTILS_SRC = utils/shared_utils.c

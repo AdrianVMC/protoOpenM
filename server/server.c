@@ -1,3 +1,7 @@
+<<<<<<< Updated upstream
+=======
+#include "config.h"
+>>>>>>> Stashed changes
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -11,6 +15,7 @@
 #include "../include/shared_utils.h"
 #include "../include/client_registry.h"
 
+<<<<<<< Updated upstream
 int authenticate(const char *username, const char *password);
 void handle_songs_request(SharedData *data);
 void handle_search_request(SharedData *data);
@@ -105,6 +110,27 @@ void handle_get_request(SharedData *data, sem_t *client_sem, sem_t *server_sem) 
         return;
     }
 
+=======
+static void handle_songs_request  (SharedData*);
+static void handle_search_request (SharedData*);
+static void handle_get_request    (SharedData*,sem_t*,sem_t*);
+static void unregister_client     (pid_t);
+static void* handle_client        (void*);
+static void cleanup               (int);
+
+
+static void playlist_path(char *buf,size_t sz,const char *user)
+{
+    snprintf(buf,sz,"%s/playlists/%s.txt",DATADIR,user);
+}
+
+
+static int register_user_server(const char *u,const char *hash)
+{
+    char path[256]; snprintf(path,sizeof path,"%s/users.txt",DATADIR);
+    FILE *f=fopen(path,"a+"); if(!f) return 0;
+    rewind(f);
+>>>>>>> Stashed changes
     char line[256];
     char filepath[256] = "";
     while (fgets(line, sizeof(line), file)) {
@@ -121,11 +147,20 @@ void handle_get_request(SharedData *data, sem_t *client_sem, sem_t *server_sem) 
     }
     fclose(file);
 
+<<<<<<< Updated upstream
     if (strlen(filepath) == 0) {
         snprintf(data->message, MAX_MSG, "ERROR|Song not found");
         sem_post(server_sem);
         return;
     }
+=======
+
+static void playlist_handle(SharedData *d,const char *user)
+{
+    char *cmd=strtok(d->message+6,"|");
+    char *arg=strtok(NULL,"|");
+    char pfile[256]; playlist_path(pfile,sizeof pfile,user);
+>>>>>>> Stashed changes
 
     FILE *fp = fopen(filepath, "rb");
     if (!fp) {
@@ -133,21 +168,53 @@ void handle_get_request(SharedData *data, sem_t *client_sem, sem_t *server_sem) 
         sem_post(server_sem);
         return;
     }
+<<<<<<< Updated upstream
 
     while (1) {
         int bytes = fread(data->audio_chunk, 1, AUDIO_CHUNK_SIZE, fp);
         data->chunk_size = bytes;
         data->is_last_chunk = feof(fp) ? 1 : 0;
+=======
+    /* ADD */
+    else if(!strcmp(cmd,"ADD") && arg){
+        FILE *fp=fopen(pfile,"a+");
+        if(!fp){ snprintf(d->message,MAX_MSG,"ERROR"); return; }
+        int dup=0; rewind(fp); char l[128];
+        while(fgets(l,sizeof l,fp)){
+            l[strcspn(l,"\n")]='\0';
+            if(!strcmp(l,arg)){ dup=1; break; }
+        }
+        if(!dup) fprintf(fp,"%s\n",arg);
+        fclose(fp); snprintf(d->message,MAX_MSG,"OK");
+    }
+
+    else if(!strcmp(cmd,"DEL") && arg){
+        FILE *fp=fopen(pfile,"r");
+        if(!fp){ snprintf(d->message,MAX_MSG,"ERROR"); return; }
+
+
+        char tmp[sizeof(pfile) + 5];
+        snprintf(tmp,sizeof tmp,"%s.tmp",pfile);
+>>>>>>> Stashed changes
 
         sem_post(server_sem);
         sem_wait(client_sem);
 
+<<<<<<< Updated upstream
         if (data->is_last_chunk) break;
     }
+=======
+
+static void handle_songs_request(SharedData *d){
+    char path[256]; snprintf(path,sizeof path,"%s/songs.txt",DATADIR);
+    FILE *f=fopen(path,"r");
+    if(!f){ snprintf(d->message,MAX_MSG,"ERROR|Cannot open songs.txt"); return; }
+>>>>>>> Stashed changes
 
     fclose(fp);
 }
 
+<<<<<<< Updated upstream
 void unregister_client(pid_t pid) {
     sem_t *reg_sem = sem_open(REGISTRY_SEM_NAME, 0);
     if (reg_sem == SEM_FAILED) return;
@@ -176,6 +243,19 @@ void unregister_client(pid_t pid) {
             reg->count--;
             printf("Client PID %d removed from registry\n", pid);
             break;
+=======
+
+static void unregister_client(pid_t pid){
+    sem_t *sem=sem_open(REGISTRY_SEM_NAME,0);
+    int fd=shm_open(REGISTRY_SHM_NAME,O_RDWR,0666);
+    if(sem==SEM_FAILED||fd==-1) return;
+    sem_wait(sem);
+    ClientRegistry *reg=mmap(NULL,sizeof(ClientRegistry),PROT_READ|PROT_WRITE,MAP_SHARED,fd,0);
+    for(int i=0;i<reg->count;i++){
+        if(reg->pids[i]==pid){
+            for(int j=i;j<reg->count-1;j++) reg->pids[j]=reg->pids[j+1];
+            reg->count--; break;
+>>>>>>> Stashed changes
         }
     }
 
@@ -185,18 +265,63 @@ void unregister_client(pid_t pid) {
     sem_close(reg_sem);
 }
 
+<<<<<<< Updated upstream
 void *handle_client(void *arg) {
     pid_t pid = *(pid_t *)arg;
     free(arg);
+=======
+
+static void* handle_client(void *arg){
+    pid_t pid=*(pid_t*)arg; free(arg);
+    char shm[64],sc[64],ss[64]; generate_names(shm,sc,ss,pid);
+    int fd=-1; for(int i=0;i<20;i++){
+        fd=shm_open(shm,O_RDWR,0666); if(fd!=-1) break; usleep(500000);}
+    if(fd==-1){ fprintf(stderr,"Open SHM fail %d\n",pid); pthread_exit(NULL); }
+>>>>>>> Stashed changes
 
     char shm_name[64], sem_client[64], sem_server[64];
     generate_names(shm_name, sem_client, sem_server, pid);
 
+<<<<<<< Updated upstream
     int shm_fd = -1;
     for (int i = 0; i < 20; i++) {
         shm_fd = shm_open(shm_name, O_RDWR, 0666);
         if (shm_fd != -1) break;
         usleep(500000);
+=======
+    while(sem_wait(csem)!=-1){
+
+        if(!strncmp(d->message,"REGISTER|",9)){
+            char *u=strtok(d->message+9,"|"); char *h=strtok(NULL,"|");
+            int ok=(u&&h)?register_user_server(u,h):0;
+            snprintf(d->message,MAX_MSG,ok?"OK":"ERROR");
+            sem_post(ssem); continue;
+        }
+
+        else if(!strncmp(d->message,"LOGIN|",6)){
+            char *u=strtok(d->message+6,"|"); char *p=strtok(NULL,"|");
+            if(u&&p&&authenticate(u,p)){
+                strncpy(current_user,u,sizeof current_user);
+                snprintf(d->message,MAX_MSG,"OK"); printf("Auth %s\n",u);
+            } else snprintf(d->message,MAX_MSG,"ERROR");
+        }
+
+        else if(!strncmp(d->message,"PLIST|",6)){
+            if(!current_user[0]) snprintf(d->message,MAX_MSG,"ERROR");
+            else playlist_handle(d,current_user);
+            sem_post(ssem); continue;
+        }
+
+        else if(!strncmp(d->message,"LOGOUT",6)){
+            printf("Logout %d\n",pid); unregister_client(pid); break;
+        }
+
+        else if(!strncmp(d->message,"SONGS",5))   handle_songs_request(d);
+        else if(!strncmp(d->message,"SEARCH|",7)) handle_search_request(d);
+        else if(!strncmp(d->message,"GET|",4)){   handle_get_request(d,csem,ssem); continue; }
+
+        sem_post(ssem);
+>>>>>>> Stashed changes
     }
 
     if (shm_fd == -1) {
@@ -263,15 +388,27 @@ void *handle_client(void *arg) {
     pthread_exit(NULL);
 }
 
+<<<<<<< Updated upstream
 void cleanup(int sig) {
     printf("\nCleaning resources...\n");
+=======
+
+static void cleanup(int sig){
+    puts("\nSIGINT -> cleaning…");
+>>>>>>> Stashed changes
     sem_unlink(REGISTRY_SEM_NAME);
     shm_unlink(REGISTRY_SHM_NAME);
     exit(0);
 }
 
+<<<<<<< Updated upstream
 int main() {
     signal(SIGINT, cleanup);
+=======
+
+int main(void){
+    signal(SIGINT,cleanup);
+>>>>>>> Stashed changes
     sem_unlink(REGISTRY_SEM_NAME);
 
     int shm_fd = shm_open(REGISTRY_SHM_NAME, O_CREAT | O_RDWR, 0666);

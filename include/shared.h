@@ -1,6 +1,7 @@
 #ifndef SHARED_H
 #define SHARED_H
 
+<<<<<<< Updated upstream
 #define MAX_MSG 1024
 #define AUDIO_CHUNK_SIZE 4096
 
@@ -21,6 +22,15 @@ typedef struct {
     char audio_chunk[AUDIO_CHUNK_SIZE]; // bloque de datos binarios
     int chunk_size;                     // cantidad real de bytes en audio_chunk
     int is_last_chunk;                 // 1 si es el último fragmento
+=======
+#include "config.h"
+
+typedef struct {
+    char message[MAX_MSG];
+    char audio_chunk[AUDIO_CHUNK_SIZE];
+    int  chunk_size;
+    int  is_last_chunk;
+>>>>>>> Stashed changes
 } SharedData;
 
 #endif
